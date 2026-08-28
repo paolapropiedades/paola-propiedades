@@ -197,18 +197,25 @@ Deno.serve(async (request) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   const resendApiKey = Deno.env.get('RESEND_API_KEY')
-  const adminEmail = Deno.env.get('ADMIN_EMAIL')
+  const adminEmails = (Deno.env.get('ADMIN_EMAILS') ?? '')
+    .split(',')
+    .map((email) => email.trim())
+    .filter(Boolean)
   const fromEmail =
     'Paola Propiedades <reservas@paolapropiedades.com>'
 
   if (
     !supabaseUrl ||
     !serviceRoleKey ||
-    !resendApiKey ||
-    !adminEmail
+    !resendApiKey
   ) {
     console.error('Faltan secrets requeridos para enviar el correo.')
     return jsonResponse({ error: 'Servicio no configurado.' }, 500)
+  }
+
+  if (adminEmails.length === 0) {
+    console.error('ADMIN_EMAILS no está configurado o está vacío.')
+    return jsonResponse({ error: 'No hay destinatarios configurados.' }, 500)
   }
 
   const supabaseAdmin = createClient(
@@ -331,7 +338,7 @@ Deno.serve(async (request) => {
       },
       body: JSON.stringify({
         from: fromEmail,
-        to: [adminEmail],
+        to: adminEmails,
         subject,
         html: buildEmailHtml(reservation, propertyName),
         text: buildEmailText(reservation, propertyName),
