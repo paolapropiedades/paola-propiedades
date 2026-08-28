@@ -1,0 +1,1103 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { supabase } from '@/lib/supabase'
+import { utils, writeFileXLSX } from 'xlsx'
+import { LogoutButton } from '@/app/components/logout-button'
+
+type Property = {
+  id: number
+  number: number
+  name: string
+}
+
+type Reservation = {
+  id: number
+  reservation_number: string
+  property_id: number
+  check_in: string
+  check_out: string
+  nights: number
+  price_per_night: number
+  total_price: number
+  amount_paid: number
+  reservation_status: string
+  payment_status: string
+  tenant_full_name: string | null
+  tenant_dni: string | null
+  tenant_address: string | null
+  tenant_phone: string | null
+  tenant_email: string | null
+  created_at: string
+}
+
+export default function ReservationsPage() {
+  const [properties, setProperties] = useState<Property[]>([])
+  const [reservations, setReservations] = useState<Reservation[]>([])
+
+  const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
+
+  const [propertyFilter, setPropertyFilter] = useState('all')
+  const [reservationStatusFilter, setReservationStatusFilter] =
+    useState('all')
+  const [paymentStatusFilter, setPaymentStatusFilter] =
+    useState('all')
+
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+
+  const [search, setSearch] = useState('')
+
+  const loadData = useCallback(async () => {
+    const {
+      data: propertiesData,
+      error: propertiesError,
+    } = await supabase
+      .from('properties')
+      .select('id, number, name')
+      .order('number')
+
+    if (propertiesError) {
+      console.error(propertiesError)
+
+      setErrorMessage(
+        'No se pudieron cargar las propiedades.'
+      )
+    }
+
+    const {
+      data: reservationsData,
+      error: reservationsError,
+    } = await supabase
+      .from('reservations')
+      .select(`
+        id,
+        reservation_number,
+        property_id,
+        check_in,
+        check_out,
+        nights,
+        price_per_night,
+        total_price,
+        amount_paid,
+        reservation_status,
+        payment_status,
+        tenant_full_name,
+        tenant_dni,
+        tenant_address,
+        tenant_phone,
+        tenant_email,
+        created_at
+      `)
+      .order('check_in', {
+        ascending: false,
+      })
+
+    if (reservationsError) {
+      console.error(reservationsError)
+
+      setErrorMessage(
+        'No se pudieron cargar las reservas.'
+      )
+    }
+
+    setProperties(propertiesData ?? [])
+    setReservations(reservationsData ?? [])
+
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    // Initial data synchronization with Supabase.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadData()
+  }, [loadData])
+
+  const getPropertyName = useCallback((propertyId: number) => {
+    return (
+      properties.find(
+        (property) =>
+          property.id === propertyId
+      )?.name ?? `Casa ${propertyId}`
+    )
+  }, [properties])
+
+  function formatMoney(value: number | null | undefined) {
+    return Number(value || 0).toLocaleString(
+      'en-US',
+      {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }
+    )
+  }
+
+  function formatDate(date: string) {
+    if (!date) return '—'
+
+    return new Intl.DateTimeFormat(
+      'es-PE',
+      {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        timeZone: 'UTC',
+      }
+    ).format(
+      new Date(`${date}T00:00:00Z`)
+    )
+  }
+
+  function getPaymentStatus(
+    reservation: Reservation
+  ) {
+    const total =
+      Number(reservation.total_price || 0)
+
+    const paid =
+      Number(reservation.amount_paid || 0)
+
+    if (total > 0 && paid >= total) {
+      return 'paid'
+    }
+
+    if (paid > 0) {
+      return 'partial'
+    }
+
+    return 'unpaid'
+  }
+
+  function paymentStatusText(
+    reservation: Reservation
+  ) {
+    const status =
+      getPaymentStatus(reservation)
+
+    if (status === 'paid') {
+      return 'Pagada'
+    }
+
+    if (status === 'partial') {
+      return 'Pago parcial'
+    }
+
+    return 'No pagada'
+  }
+
+  function reservationStatusText(
+    status: string
+  ) {
+    if (status === 'confirmed') {
+      return 'Confirmada'
+    }
+
+    if (status === 'pending') {
+      return 'Pendiente'
+    }
+
+    if (status === 'cancelled') {
+      return 'Cancelada'
+    }
+
+    if (status === 'blocked') {
+      return 'Bloqueada'
+    }
+
+    return status
+  }
+
+  const filteredReservations = useMemo(() => {
+    return reservations.filter(
+      (reservation) => {
+        /*
+         * CASA
+         */
+
+        if (
+          propertyFilter !== 'all' &&
+          reservation.property_id !==
+            Number(propertyFilter)
+        ) {
+          return false
+        }
+
+        /*
+         * ESTADO RESERVA
+         */
+
+        if (
+          reservationStatusFilter !==
+            'all' &&
+          reservation.reservation_status !==
+            reservationStatusFilter
+        ) {
+          return false
+        }
+
+        /*
+         * ESTADO PAGO
+         */
+
+        if (
+          paymentStatusFilter !== 'all' &&
+          getPaymentStatus(reservation) !==
+            paymentStatusFilter
+        ) {
+          return false
+        }
+
+        /*
+         * FECHA DESDE
+         */
+
+        if (
+          dateFrom &&
+          reservation.check_out < dateFrom
+        ) {
+          return false
+        }
+
+        /*
+         * FECHA HASTA
+         */
+
+        if (
+          dateTo &&
+          reservation.check_in > dateTo
+        ) {
+          return false
+        }
+
+        /*
+         * BUSCADOR
+         */
+
+        if (search.trim()) {
+          const searchText =
+            search
+              .trim()
+              .toLowerCase()
+
+          const haystack = [
+            reservation.reservation_number,
+            reservation.tenant_full_name,
+            reservation.tenant_dni,
+            reservation.tenant_phone,
+            reservation.tenant_email,
+            getPropertyName(
+              reservation.property_id
+            ),
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+
+          if (
+            !haystack.includes(searchText)
+          ) {
+            return false
+          }
+        }
+
+        return true
+      }
+    )
+  }, [
+    reservations,
+    getPropertyName,
+    propertyFilter,
+    reservationStatusFilter,
+    paymentStatusFilter,
+    dateFrom,
+    dateTo,
+    search,
+  ])
+
+  const summary = useMemo(() => {
+    const totalValue =
+      filteredReservations.reduce(
+        (sum, reservation) =>
+          sum +
+          Number(
+            reservation.total_price || 0
+          ),
+        0
+      )
+
+    const totalPaid =
+      filteredReservations.reduce(
+        (sum, reservation) =>
+          sum +
+          Number(
+            reservation.amount_paid || 0
+          ),
+        0
+      )
+
+    return {
+      count: filteredReservations.length,
+      totalValue,
+      totalPaid,
+      remaining: Math.max(
+        0,
+        totalValue - totalPaid
+      ),
+    }
+  }, [filteredReservations])
+
+  function clearFilters() {
+    setPropertyFilter('all')
+    setReservationStatusFilter('all')
+    setPaymentStatusFilter('all')
+    setDateFrom('')
+    setDateTo('')
+    setSearch('')
+  }
+
+  function downloadExcel() {
+    if (
+      filteredReservations.length === 0
+    ) {
+      alert(
+        'No hay reservas para exportar con los filtros seleccionados.'
+      )
+
+      return
+    }
+
+    const rows =
+      filteredReservations.map(
+        (reservation) => {
+          const total =
+            Number(
+              reservation.total_price || 0
+            )
+
+          const paid =
+            Number(
+              reservation.amount_paid || 0
+            )
+
+          const remaining =
+            Math.max(0, total - paid)
+
+          return {
+            'N° Reserva':
+              reservation.reservation_number,
+
+            Casa:
+              getPropertyName(
+                reservation.property_id
+              ),
+
+            'Check-in':
+              formatDate(
+                reservation.check_in
+              ),
+
+            'Check-out':
+              formatDate(
+                reservation.check_out
+              ),
+
+            Noches:
+              reservation.nights,
+
+            'Nombre completo':
+              reservation.tenant_full_name ??
+              '',
+
+            DNI:
+              reservation.tenant_dni ??
+              '',
+
+            Dirección:
+              reservation.tenant_address ??
+              '',
+
+            Celular:
+              reservation.tenant_phone ??
+              '',
+
+            Correo:
+              reservation.tenant_email ??
+              '',
+
+            'Precio por noche':
+              Number(
+                reservation.price_per_night ||
+                  0
+              ),
+
+            'Total reserva':
+              total,
+
+            Pagado:
+              paid,
+
+            'Saldo pendiente':
+              remaining,
+
+            'Estado de pago':
+              paymentStatusText(
+                reservation
+              ),
+
+            'Estado de reserva':
+              reservationStatusText(
+                reservation.reservation_status
+              ),
+          }
+        }
+      )
+
+    const worksheet =
+      utils.json_to_sheet(rows)
+
+    /*
+     * ANCHOS DE COLUMNAS
+     */
+
+    worksheet['!cols'] = [
+      { wch: 16 },
+      { wch: 14 },
+      { wch: 13 },
+      { wch: 13 },
+      { wch: 10 },
+      { wch: 28 },
+      { wch: 15 },
+      { wch: 35 },
+      { wch: 18 },
+      { wch: 30 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 20 },
+    ]
+
+    const workbook =
+      utils.book_new()
+
+    utils.book_append_sheet(
+      workbook,
+      worksheet,
+      'Reservas'
+    )
+
+    const today =
+      new Date()
+        .toISOString()
+        .split('T')[0]
+
+    writeFileXLSX(
+      workbook,
+      `Paola_Propiedades_Reservas_${today}.xlsx`,
+      {
+        compression: true,
+      }
+    )
+  }
+
+  return (
+    <main className="min-h-screen bg-gray-50">
+
+      <div className="mx-auto max-w-[1600px] p-8">
+
+        {/* HEADER */}
+
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+
+          <div>
+
+            <Link
+              href="/"
+              className="text-sm font-bold text-gray-600 hover:text-gray-950"
+            >
+              ← Volver al calendario
+            </Link>
+
+            <h1 className="mt-4 text-3xl font-bold text-gray-950">
+              Reservas
+            </h1>
+
+            <p className="mt-1 font-medium text-gray-700">
+              Gestión y reportes de Paola Propiedades
+            </p>
+
+          </div>
+
+
+          <div className="flex flex-wrap gap-3">
+            <LogoutButton />
+
+            <button
+              onClick={downloadExcel}
+              disabled={
+                filteredReservations.length ===
+                0
+              }
+              className="rounded-lg bg-green-700 px-5 py-3 font-bold text-white hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              ↓ Descargar Excel
+            </button>
+          </div>
+
+        </div>
+
+
+        {/* RESUMEN */}
+
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+
+            <p className="text-sm font-semibold text-gray-600">
+              Reservas
+            </p>
+
+            <p className="mt-2 text-2xl font-bold text-gray-950">
+              {summary.count}
+            </p>
+
+          </div>
+
+
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+
+            <p className="text-sm font-semibold text-gray-600">
+              Valor total
+            </p>
+
+            <p className="mt-2 text-2xl font-bold text-gray-950">
+              US$ {formatMoney(
+                summary.totalValue
+              )}
+            </p>
+
+          </div>
+
+
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+
+            <p className="text-sm font-semibold text-gray-600">
+              Pagado
+            </p>
+
+            <p className="mt-2 text-2xl font-bold text-green-700">
+              US$ {formatMoney(
+                summary.totalPaid
+              )}
+            </p>
+
+          </div>
+
+
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+
+            <p className="text-sm font-semibold text-gray-600">
+              Por cobrar
+            </p>
+
+            <p className="mt-2 text-2xl font-bold text-red-700">
+              US$ {formatMoney(
+                summary.remaining
+              )}
+            </p>
+
+          </div>
+
+        </div>
+
+
+        {/* FILTROS */}
+
+        <div className="mt-8 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+
+          <div className="flex items-center justify-between">
+
+            <h2 className="text-lg font-bold text-gray-950">
+              Filtros
+            </h2>
+
+            <button
+              onClick={clearFilters}
+              className="text-sm font-bold text-gray-600 hover:text-gray-950"
+            >
+              Limpiar filtros
+            </button>
+
+          </div>
+
+
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+
+            {/* BUSCADOR */}
+
+            <div>
+
+              <label className="text-sm font-semibold text-gray-800">
+                Buscar
+              </label>
+
+              <input
+                type="text"
+                value={search}
+                onChange={(e) =>
+                  setSearch(
+                    e.target.value
+                  )
+                }
+                placeholder="Nombre, DNI, celular, correo..."
+                className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-950 placeholder:text-gray-500"
+              />
+
+            </div>
+
+
+            {/* CASA */}
+
+            <div>
+
+              <label className="text-sm font-semibold text-gray-800">
+                Casa
+              </label>
+
+              <select
+                value={propertyFilter}
+                onChange={(e) =>
+                  setPropertyFilter(
+                    e.target.value
+                  )
+                }
+                className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-950"
+              >
+
+                <option value="all">
+                  Todas las casas
+                </option>
+
+                {properties.map(
+                  (property) => (
+
+                    <option
+                      key={property.id}
+                      value={property.id}
+                    >
+                      {property.name}
+                    </option>
+
+                  )
+                )}
+
+              </select>
+
+            </div>
+
+
+            {/* ESTADO RESERVA */}
+
+            <div>
+
+              <label className="text-sm font-semibold text-gray-800">
+                Estado de reserva
+              </label>
+
+              <select
+                value={
+                  reservationStatusFilter
+                }
+                onChange={(e) =>
+                  setReservationStatusFilter(
+                    e.target.value
+                  )
+                }
+                className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-950"
+              >
+
+                <option value="all">
+                  Todos
+                </option>
+
+                <option value="confirmed">
+                  Confirmadas
+                </option>
+
+                <option value="pending">
+                  Pendientes
+                </option>
+
+                <option value="cancelled">
+                  Canceladas
+                </option>
+
+                <option value="blocked">
+                  Bloqueadas
+                </option>
+
+              </select>
+
+            </div>
+
+
+            {/* ESTADO PAGO */}
+
+            <div>
+
+              <label className="text-sm font-semibold text-gray-800">
+                Estado de pago
+              </label>
+
+              <select
+                value={
+                  paymentStatusFilter
+                }
+                onChange={(e) =>
+                  setPaymentStatusFilter(
+                    e.target.value
+                  )
+                }
+                className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-950"
+              >
+
+                <option value="all">
+                  Todos
+                </option>
+
+                <option value="unpaid">
+                  No pagadas
+                </option>
+
+                <option value="partial">
+                  Pago parcial
+                </option>
+
+                <option value="paid">
+                  Pagadas
+                </option>
+
+              </select>
+
+            </div>
+
+
+            {/* DESDE */}
+
+            <div>
+
+              <label className="text-sm font-semibold text-gray-800">
+                Desde
+              </label>
+
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) =>
+                  setDateFrom(
+                    e.target.value
+                  )
+                }
+                className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-950"
+              />
+
+            </div>
+
+
+            {/* HASTA */}
+
+            <div>
+
+              <label className="text-sm font-semibold text-gray-800">
+                Hasta
+              </label>
+
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) =>
+                  setDateTo(
+                    e.target.value
+                  )
+                }
+                className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-950"
+              />
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        {/* TABLA */}
+
+        <div className="mt-8 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+
+          <div className="flex items-center justify-between border-b border-gray-200 p-5">
+
+            <div>
+
+              <h2 className="font-bold text-gray-950">
+                Resultados
+              </h2>
+
+              <p className="mt-1 text-sm font-medium text-gray-600">
+                {filteredReservations.length}{' '}
+                reserva
+                {filteredReservations.length !==
+                1
+                  ? 's'
+                  : ''}
+              </p>
+
+            </div>
+
+          </div>
+
+
+          {loading ? (
+
+            <div className="p-10 text-center font-medium text-gray-600">
+              Cargando reservas...
+            </div>
+
+          ) : errorMessage ? (
+
+            <div className="p-10 text-center font-medium text-red-700">
+              {errorMessage}
+            </div>
+
+          ) : filteredReservations.length ===
+            0 ? (
+
+            <div className="p-10 text-center">
+
+              <p className="font-bold text-gray-950">
+                No encontramos reservas
+              </p>
+
+              <p className="mt-1 text-sm text-gray-600">
+                Prueba cambiando los filtros.
+              </p>
+
+            </div>
+
+          ) : (
+
+            <div className="overflow-x-auto">
+
+              <table className="w-full min-w-[1400px] border-collapse">
+
+                <thead className="bg-gray-100">
+
+                  <tr className="text-left text-xs font-bold uppercase tracking-wide text-gray-700">
+
+                    <th className="p-4">
+                      Casa
+                    </th>
+
+                    <th className="p-4">
+                      Tenant
+                    </th>
+
+                    <th className="p-4">
+                      Check-in
+                    </th>
+
+                    <th className="p-4">
+                      Check-out
+                    </th>
+
+                    <th className="p-4 text-right">
+                      Total
+                    </th>
+
+                    <th className="p-4 text-right">
+                      Pagado
+                    </th>
+
+                    <th className="p-4 text-right">
+                      Pendiente
+                    </th>
+
+                    <th className="p-4">
+                      Pago
+                    </th>
+
+                    <th className="p-4">
+                      Reserva
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                  {filteredReservations.map(
+                    (reservation) => {
+                      const total =
+                        Number(
+                          reservation.total_price ||
+                            0
+                        )
+
+                      const paid =
+                        Number(
+                          reservation.amount_paid ||
+                            0
+                        )
+
+                      const remaining =
+                        Math.max(
+                          0,
+                          total - paid
+                        )
+
+                      const paymentStatus =
+                        getPaymentStatus(
+                          reservation
+                        )
+
+                      return (
+
+                        <tr
+                          key={reservation.id}
+                          className="border-t border-gray-200 hover:bg-gray-50"
+                        >
+
+                          <td className="p-4 font-bold text-gray-950">
+                            {getPropertyName(
+                              reservation.property_id
+                            )}
+                          </td>
+
+
+                          <td className="p-4">
+
+                            <p className="font-semibold text-gray-950">
+                              {reservation.tenant_full_name ??
+                                'Pendiente de confirmar'}
+                            </p>
+
+                            {reservation.tenant_email && (
+
+                              <p className="mt-1 text-xs text-gray-600">
+                                {
+                                  reservation.tenant_email
+                                }
+                              </p>
+
+                            )}
+
+                          </td>
+
+
+                          <td className="p-4 font-medium text-gray-800">
+                            {formatDate(
+                              reservation.check_in
+                            )}
+                          </td>
+
+
+                          <td className="p-4 font-medium text-gray-800">
+                            {formatDate(
+                              reservation.check_out
+                            )}
+                          </td>
+
+
+                          <td className="p-4 text-right font-bold text-gray-950">
+                            US${' '}
+                            {formatMoney(
+                              total
+                            )}
+                          </td>
+
+
+                          <td className="p-4 text-right font-bold text-green-700">
+                            US${' '}
+                            {formatMoney(
+                              paid
+                            )}
+                          </td>
+
+
+                          <td className="p-4 text-right font-bold text-gray-950">
+                            US${' '}
+                            {formatMoney(
+                              remaining
+                            )}
+                          </td>
+
+
+                          <td className="p-4">
+
+                            <span
+                              className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                                paymentStatus ===
+                                'paid'
+                                  ? 'bg-green-100 text-green-800'
+                                  : paymentStatus ===
+                                      'partial'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-red-100 text-red-800'
+                              }`}
+                            >
+                              {paymentStatusText(
+                                reservation
+                              )}
+                            </span>
+
+                          </td>
+
+
+                          <td className="p-4">
+
+                            <span
+                              className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                                reservation.reservation_status ===
+                                'confirmed'
+                                  ? 'bg-green-100 text-green-800'
+                                  : reservation.reservation_status ===
+                                      'pending'
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : reservation.reservation_status ===
+                                        'cancelled'
+                                      ? 'bg-gray-200 text-gray-800'
+                                      : 'bg-gray-200 text-gray-800'
+                              }`}
+                            >
+                              {reservationStatusText(
+                                reservation.reservation_status
+                              )}
+                            </span>
+
+                          </td>
+
+                        </tr>
+
+                      )
+                    }
+                  )}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          )}
+
+        </div>
+
+      </div>
+
+    </main>
+  )
+}
