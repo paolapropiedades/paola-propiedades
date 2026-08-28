@@ -228,13 +228,22 @@ export default function ReservationsPage() {
          * ESTADO RESERVA
          */
 
-        if (
-          reservationStatusFilter !==
-            'all' &&
-          reservation.reservation_status !==
-            reservationStatusFilter
-        ) {
-          return false
+        if (reservationStatusFilter === 'cancelled') {
+          if (reservation.reservation_status !== 'cancelled') {
+            return false
+          }
+        } else {
+          if (reservation.reservation_status === 'cancelled') {
+            return false
+          }
+
+          if (
+            reservationStatusFilter !== 'all' &&
+            reservation.reservation_status !==
+              reservationStatusFilter
+          ) {
+            return false
+          }
         }
 
         /*
@@ -317,8 +326,15 @@ export default function ReservationsPage() {
   ])
 
   const summary = useMemo(() => {
+    const activeReservations =
+      filteredReservations.filter(
+        (reservation) =>
+          reservation.reservation_status !==
+          'cancelled'
+      )
+
     const totalValue =
-      filteredReservations.reduce(
+      activeReservations.reduce(
         (sum, reservation) =>
           sum +
           Number(
@@ -328,7 +344,7 @@ export default function ReservationsPage() {
       )
 
     const totalPaid =
-      filteredReservations.reduce(
+      activeReservations.reduce(
         (sum, reservation) =>
           sum +
           Number(
@@ -337,14 +353,26 @@ export default function ReservationsPage() {
         0
       )
 
+    const remaining =
+      activeReservations.reduce(
+        (sum, reservation) => {
+          const total = Number(
+            reservation.total_price || 0
+          )
+          const paid = Number(
+            reservation.amount_paid || 0
+          )
+
+          return sum + Math.max(total - paid, 0)
+        },
+        0
+      )
+
     return {
-      count: filteredReservations.length,
+      count: activeReservations.length,
       totalValue,
       totalPaid,
-      remaining: Math.max(
-        0,
-        totalValue - totalPaid
-      ),
+      remaining,
     }
   }, [filteredReservations])
 
@@ -382,7 +410,10 @@ export default function ReservationsPage() {
             )
 
           const remaining =
-            Math.max(0, total - paid)
+            reservation.reservation_status ===
+            'cancelled'
+              ? 'Cancelada'
+              : Math.max(0, total - paid)
 
           return {
             'N° Reserva':
@@ -735,10 +766,6 @@ export default function ReservationsPage() {
                   Canceladas
                 </option>
 
-                <option value="blocked">
-                  Bloqueadas
-                </option>
-
               </select>
 
             </div>
@@ -959,6 +986,10 @@ export default function ReservationsPage() {
                           total - paid
                         )
 
+                      const isCancelled =
+                        reservation.reservation_status ===
+                        'cancelled'
+
                       const paymentStatus =
                         getPaymentStatus(
                           reservation
@@ -1029,10 +1060,11 @@ export default function ReservationsPage() {
 
 
                           <td className="p-4 text-right font-bold text-gray-950">
-                            US${' '}
-                            {formatMoney(
-                              remaining
-                            )}
+                            {isCancelled
+                              ? '—'
+                              : `US$ ${formatMoney(
+                                  remaining
+                                )}`}
                           </td>
 
 
