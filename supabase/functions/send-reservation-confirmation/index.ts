@@ -199,8 +199,7 @@ Deno.serve(async (request) => {
   const resendApiKey = Deno.env.get('RESEND_API_KEY')
   const adminEmail = Deno.env.get('ADMIN_EMAIL')
   const fromEmail =
-    Deno.env.get('RESEND_FROM_EMAIL') ??
-    'Paola Propiedades <onboarding@resend.dev>'
+    'Paola Propiedades <reservas@paolapropiedades.com>'
 
   if (
     !supabaseUrl ||
