@@ -13,10 +13,10 @@ begin
   from public.properties as property;
 
   if existing_numbers is distinct from
-    array[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    array[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
   then
     raise exception
-      'Se esperaban exactamente las propiedades numeradas del 1 al 12. No se modificó ningún dato.';
+      'Se esperaban exactamente las propiedades numeradas del 1 al 13. No se modificó ningún dato.';
   end if;
 end
 $$;
@@ -35,8 +35,9 @@ from (
     (8, 'Dpto 105'),
     (9, 'Dpto 106'),
     (10, 'Dpto 201'),
-    (11, 'Dpto 301'),
-    (12, 'Dpto 306')
+    (11, 'Dpto 202'),
+    (12, 'Dpto 301'),
+    (13, 'Dpto 306')
 ) as property_names(number, name)
 where property.number = property_names.number;
 

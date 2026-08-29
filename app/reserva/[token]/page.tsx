@@ -4,6 +4,7 @@ import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { BrandLogo } from '@/app/components/brand-logo'
+import { GuestListForm } from './guest-list-form'
 
 type Reservation = {
   reservation_number: string
@@ -443,6 +444,8 @@ export default function ReservationPage({
               <div className="mt-6 rounded-xl border border-green-200 bg-green-50 p-4 font-semibold text-green-900">
                 ¡Gracias!
               </div>
+
+              <GuestListForm token={token} />
 
             </div>
 

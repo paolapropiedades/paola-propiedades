@@ -33,6 +33,18 @@ type Reservation = {
   created_at: string
 }
 
+type GuestList = {
+  reservation_id: number
+  guests: Array<{
+    full_name: string
+    dni: string
+    age: number
+  }>
+  vehicle_plates: string[]
+  submitted_at: string
+  updated_at: string
+}
+
 type ReservationPeriod = 'upcoming' | 'history'
 
 function getTodayInLima() {
@@ -53,6 +65,7 @@ function getTodayInLima() {
 export default function ReservationsPage() {
   const [properties, setProperties] = useState<Property[]>([])
   const [reservations, setReservations] = useState<Reservation[]>([])
+  const [guestLists, setGuestLists] = useState<GuestList[]>([])
 
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
@@ -123,8 +136,30 @@ export default function ReservationsPage() {
       )
     }
 
+    const {
+      data: guestListsData,
+      error: guestListsError,
+    } = await supabase
+      .from('reservation_guest_lists')
+      .select(`
+        reservation_id,
+        guests,
+        vehicle_plates,
+        submitted_at,
+        updated_at
+      `)
+
+    if (guestListsError) {
+      console.error(guestListsError)
+
+      setErrorMessage(
+        'No se pudieron cargar las listas de huéspedes.'
+      )
+    }
+
     setProperties(propertiesData ?? [])
     setReservations(reservationsData ?? [])
+    setGuestLists((guestListsData ?? []) as GuestList[])
 
     setLoading(false)
   }, [])
@@ -168,6 +203,20 @@ export default function ReservationsPage() {
     ).format(
       new Date(`${date}T00:00:00Z`)
     )
+  }
+
+  function getGuestListDeadline(checkIn: string) {
+    const deadline = new Date(`${checkIn}T00:00:00Z`)
+    deadline.setUTCDate(deadline.getUTCDate() - 7)
+    return deadline.toISOString().split('T')[0]
+  }
+
+  function formatDateTime(value: string) {
+    return new Intl.DateTimeFormat('es-PE', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+      timeZone: 'America/Lima',
+    }).format(new Date(value))
   }
 
   function getPaymentStatus(
@@ -564,6 +613,60 @@ export default function ReservationsPage() {
       {
         compression: true,
       }
+    )
+  }
+
+  function downloadGuestList(
+    reservation: Reservation,
+    guestList: GuestList
+  ) {
+    const propertyName = getPropertyName(reservation.property_id)
+    const deadline = getGuestListDeadline(reservation.check_in)
+
+    const guestRows = guestList.guests.map((guest, index) => ({
+      'N°': index + 1,
+      'N° Reserva': reservation.reservation_number,
+      Propiedad: propertyName,
+      'Check-in': formatDate(reservation.check_in),
+      'Fecha límite': formatDate(deadline),
+      'Fecha de envío': formatDateTime(guestList.submitted_at),
+      'Nombre completo': guest.full_name,
+      DNI: guest.dni,
+      Edad: guest.age,
+    }))
+
+    const vehicleRows =
+      guestList.vehicle_plates.length > 0
+        ? guestList.vehicle_plates.map((plate, index) => ({
+            Vehículo: index + 1,
+            Placa: plate,
+          }))
+        : [{ Vehículo: '', Placa: 'Sin vehículos registrados' }]
+
+    const workbook = utils.book_new()
+    const guestsWorksheet = utils.json_to_sheet(guestRows)
+    const vehiclesWorksheet = utils.json_to_sheet(vehicleRows)
+
+    guestsWorksheet['!cols'] = [
+      { wch: 6 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 20 },
+      { wch: 32 },
+      { wch: 18 },
+      { wch: 8 },
+    ]
+    vehiclesWorksheet['!cols'] = [{ wch: 12 }, { wch: 24 }]
+
+    utils.book_append_sheet(workbook, guestsWorksheet, 'Huéspedes')
+    utils.book_append_sheet(workbook, vehiclesWorksheet, 'Vehículos')
+
+    writeFileXLSX(
+      workbook,
+      `Lista_${reservation.reservation_number}_${propertyName.replaceAll(' ', '_')}.xlsx`,
+      { compression: true }
     )
   }
 
@@ -985,7 +1088,7 @@ export default function ReservationsPage() {
 
             <div className="overflow-x-auto">
 
-              <table className="w-full min-w-[1400px] border-collapse">
+              <table className="w-full min-w-[1550px] border-collapse">
 
                 <thead className="bg-gray-100">
 
@@ -1027,6 +1130,10 @@ export default function ReservationsPage() {
                       Reserva
                     </th>
 
+                    <th className="p-4">
+                      Lista de huéspedes
+                    </th>
+
                   </tr>
 
                 </thead>
@@ -1061,6 +1168,18 @@ export default function ReservationsPage() {
                       const paymentStatus =
                         getPaymentStatus(
                           reservation
+                        )
+
+                      const guestList =
+                        guestLists.find(
+                          (list) =>
+                            list.reservation_id ===
+                            reservation.id
+                        )
+
+                      const guestListDeadline =
+                        getGuestListDeadline(
+                          reservation.check_in
                         )
 
                       return (
@@ -1177,6 +1296,48 @@ export default function ReservationsPage() {
                                 reservation.reservation_status
                               )}
                             </span>
+
+                          </td>
+
+
+                          <td className="p-4">
+
+                            {guestList ? (
+
+                              <div>
+                                <p className="text-xs font-bold text-green-700">
+                                  Recibida ({guestList.guests.length})
+                                </p>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    downloadGuestList(
+                                      reservation,
+                                      guestList
+                                    )
+                                  }
+                                  className="mt-2 rounded-lg border border-gray-300 px-3 py-2 text-xs font-bold text-gray-800 hover:bg-gray-100"
+                                >
+                                  ↓ Descargar
+                                </button>
+                              </div>
+
+                            ) : (
+
+                              <div>
+                                <p className="text-xs font-bold text-amber-700">
+                                  Pendiente
+                                </p>
+
+                                <p className="mt-1 text-xs text-gray-600">
+                                  Límite: {formatDate(
+                                    guestListDeadline
+                                  )}
+                                </p>
+                              </div>
+
+                            )}
 
                           </td>
 
