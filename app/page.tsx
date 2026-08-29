@@ -602,7 +602,7 @@ export default function Home() {
 
         <div className="mt-10 overflow-hidden rounded-xl border border-gray-300 bg-white shadow-sm">
 
-          <div className="flex items-center justify-between border-b border-gray-300 p-5">
+          <div className="flex items-center justify-between border-b border-gray-300 p-4">
 
             <div>
               <h2 className="text-lg font-bold text-gray-950">
@@ -647,15 +647,15 @@ export default function Home() {
           <div className="overflow-x-auto lg:overflow-x-hidden">
 
             <div
-              className="min-w-[1100px] lg:min-w-0 lg:w-full"
+              className="min-w-[900px] lg:min-w-0 lg:w-full"
               style={{
                 display: 'grid',
                 gridTemplateColumns:
-                  `120px repeat(${daysInMonth}, minmax(0, 1fr))`,
+                  `105px repeat(${daysInMonth}, minmax(0, 1fr))`,
               }}
             >
 
-              <div className="sticky left-0 z-20 border-b border-r border-gray-300 bg-gray-100 px-2 py-3 text-sm font-bold text-gray-950">
+              <div className="sticky left-0 z-20 border-b border-r border-gray-300 bg-gray-100 px-2 py-2 text-xs font-bold text-gray-950">
                 Propiedad
               </div>
 
@@ -670,13 +670,13 @@ export default function Home() {
                 return (
                   <div
                     key={day}
-                    className="min-w-0 border-b border-r border-gray-300 bg-gray-100 py-2 text-center"
+                    className="min-w-0 border-b border-r border-gray-300 bg-gray-100 py-1.5 text-center"
                   >
-                    <div className="truncate text-[10px] font-bold text-gray-800 xl:text-xs">
+                    <div className="truncate text-[9px] font-bold text-gray-800 xl:text-[10px]">
                       {weekday}
                     </div>
 
-                    <div className="mt-0.5 text-xs font-medium text-gray-700 xl:text-sm">
+                    <div className="text-[11px] font-medium text-gray-700 xl:text-xs">
                       {day}
                     </div>
                   </div>
@@ -690,7 +690,7 @@ export default function Home() {
                   style={{ display: 'contents' }}
                 >
 
-                  <div className="sticky left-0 z-10 flex items-center border-b border-r border-gray-300 bg-white px-2 text-sm font-semibold text-gray-950">
+                  <div className="sticky left-0 z-10 flex items-center border-b border-r border-gray-300 bg-white px-2 text-xs font-semibold text-gray-950 xl:text-sm">
                     {property.name}
                   </div>
 
@@ -717,7 +717,7 @@ export default function Home() {
                             openReservation(reservation)
                           }
                         }}
-                        className={`relative flex h-14 items-center border-b border-r border-gray-200 ${
+                        className={`relative flex h-10 items-center border-b border-r border-gray-200 ${
                           reservation
                             ? 'cursor-pointer'
                             : ''
@@ -725,7 +725,7 @@ export default function Home() {
                       >
 
                         {showName && (
-                          <span className="absolute left-1 z-20 whitespace-nowrap rounded-md bg-gray-950 px-2 py-1 text-xs font-bold text-white shadow">
+                          <span className="absolute left-1 z-20 whitespace-nowrap rounded bg-gray-950 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">
                             {reservation.tenant_full_name}
                           </span>
                         )}
@@ -745,7 +745,7 @@ export default function Home() {
 
           {/* LEYENDA */}
 
-          <div className="flex flex-wrap gap-6 border-t border-gray-300 p-5 text-sm font-medium text-gray-800">
+          <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-gray-300 p-4 text-xs font-medium text-gray-800">
 
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-full border border-gray-400 bg-white" />
