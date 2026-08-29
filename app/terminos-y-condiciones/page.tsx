@@ -122,7 +122,20 @@ const sections = [
   },
 ]
 
-export default function TermsAndConditionsPage() {
+export default async function TermsAndConditionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    returnTo?: string | string[]
+  }>
+}) {
+  const requestedReturnTo = (await searchParams).returnTo
+  const returnTo =
+    typeof requestedReturnTo === 'string' &&
+    /^\/reserva\/[A-Za-z0-9_-]{32,128}$/.test(requestedReturnTo)
+      ? requestedReturnTo
+      : '/'
+
   return (
     <main className="min-h-screen bg-gray-100 px-4 py-10">
       <article className="mx-auto max-w-3xl rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-10">
@@ -159,10 +172,12 @@ export default function TermsAndConditionsPage() {
 
         <footer className="mt-10 border-t border-gray-200 pt-6 text-center">
           <Link
-            href="/login"
+            href={returnTo}
             className="font-bold text-gray-700 underline underline-offset-4 hover:text-gray-950"
           >
-            Volver
+            {returnTo === '/'
+              ? 'Ir al inicio'
+              : 'Volver a la reserva'}
           </Link>
         </footer>
       </article>

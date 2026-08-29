@@ -606,7 +606,12 @@ export default function ReservationPage({
                   </label>
 
                   <Link
-                    href="/terminos-y-condiciones"
+                    href={{
+                      pathname: '/terminos-y-condiciones',
+                      query: {
+                        returnTo: `/reserva/${token}`,
+                      },
+                    }}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-bold text-gray-950 underline underline-offset-2 hover:text-gray-700"
