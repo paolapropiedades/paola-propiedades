@@ -200,17 +200,32 @@ export default function Home() {
     })
   }
 
-  function getReservationColor(status?: string) {
-    if (status === 'pending') {
-      return 'bg-amber-300 hover:bg-amber-400'
+  function getReservationColor(reservation?: Reservation) {
+    if (!reservation) {
+      return 'bg-white hover:bg-gray-100'
     }
 
-    if (status === 'confirmed') {
-      return 'bg-green-500 hover:bg-green-600'
+    if (reservation.reservation_status === 'pending') {
+      return 'bg-gray-400 hover:bg-gray-500'
     }
 
-    if (status === 'blocked') {
-      return 'bg-gray-500 hover:bg-gray-600'
+    if (reservation.reservation_status === 'confirmed') {
+      const total = Number(reservation.total_price || 0)
+      const paid = Number(reservation.amount_paid || 0)
+
+      if (paid <= 0) {
+        return 'bg-red-500 hover:bg-red-600'
+      }
+
+      if (paid >= total) {
+        return 'bg-green-500 hover:bg-green-600'
+      }
+
+      return 'bg-amber-400 hover:bg-amber-500'
+    }
+
+    if (reservation.reservation_status === 'blocked') {
+      return 'bg-gray-700 hover:bg-gray-800'
     }
 
     return 'bg-white hover:bg-gray-100'
@@ -627,18 +642,18 @@ export default function Home() {
           </div>
 
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto lg:overflow-x-hidden">
 
             <div
-              className="min-w-max"
+              className="min-w-[1100px] lg:min-w-0 lg:w-full"
               style={{
                 display: 'grid',
                 gridTemplateColumns:
-                  `150px repeat(${daysInMonth}, 48px)`,
+                  `120px repeat(${daysInMonth}, minmax(0, 1fr))`,
               }}
             >
 
-              <div className="sticky left-0 z-20 border-b border-r border-gray-300 bg-gray-100 p-3 font-bold text-gray-950">
+              <div className="sticky left-0 z-20 border-b border-r border-gray-300 bg-gray-100 px-2 py-3 text-sm font-bold text-gray-950">
                 Propiedad
               </div>
 
@@ -653,13 +668,13 @@ export default function Home() {
                 return (
                   <div
                     key={day}
-                    className="border-b border-r border-gray-300 bg-gray-100 py-2 text-center"
+                    className="min-w-0 border-b border-r border-gray-300 bg-gray-100 py-2 text-center"
                   >
-                    <div className="text-xs font-bold text-gray-800">
+                    <div className="truncate text-[10px] font-bold text-gray-800 xl:text-xs">
                       {weekday}
                     </div>
 
-                    <div className="mt-0.5 font-medium text-gray-600">
+                    <div className="mt-0.5 text-xs font-medium text-gray-700 xl:text-sm">
                       {day}
                     </div>
                   </div>
@@ -673,7 +688,7 @@ export default function Home() {
                   style={{ display: 'contents' }}
                 >
 
-                  <div className="sticky left-0 z-10 flex items-center border-b border-r border-gray-300 bg-white px-4 font-semibold text-gray-950">
+                  <div className="sticky left-0 z-10 flex items-center border-b border-r border-gray-300 bg-white px-2 text-sm font-semibold text-gray-950">
                     {property.name}
                   </div>
 
@@ -704,13 +719,11 @@ export default function Home() {
                           reservation
                             ? 'cursor-pointer'
                             : ''
-                        } ${getReservationColor(
-                          reservation?.reservation_status
-                        )}`}
+                        } ${getReservationColor(reservation)}`}
                       >
 
                         {showName && (
-                          <span className="absolute left-2 z-20 whitespace-nowrap rounded-md bg-green-800 px-2 py-1 text-xs font-bold text-white shadow">
+                          <span className="absolute left-1 z-20 whitespace-nowrap rounded-md bg-gray-950 px-2 py-1 text-xs font-bold text-white shadow">
                             {reservation.tenant_full_name}
                           </span>
                         )}
@@ -738,17 +751,27 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-amber-300" />
-              Pendiente
+              <span className="h-3 w-3 rounded-full bg-gray-400" />
+              Sin confirmar
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-red-500" />
+              Confirmada / sin pago
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-amber-400" />
+              Pago parcial
             </div>
 
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-full bg-green-500" />
-              Confirmada
+              Pagada
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-gray-500" />
+              <span className="h-3 w-3 rounded-full bg-gray-700" />
               Bloqueada
             </div>
 

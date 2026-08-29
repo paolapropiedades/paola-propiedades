@@ -32,6 +32,23 @@ type Reservation = {
   created_at: string
 }
 
+type ReservationPeriod = 'upcoming' | 'history'
+
+function getTodayInLima() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Lima',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+
+  const year = parts.find((part) => part.type === 'year')?.value
+  const month = parts.find((part) => part.type === 'month')?.value
+  const day = parts.find((part) => part.type === 'day')?.value
+
+  return `${year}-${month}-${day}`
+}
+
 export default function ReservationsPage() {
   const [properties, setProperties] = useState<Property[]>([])
   const [reservations, setReservations] = useState<Reservation[]>([])
@@ -44,6 +61,8 @@ export default function ReservationsPage() {
     useState('all')
   const [paymentStatusFilter, setPaymentStatusFilter] =
     useState('all')
+  const [reservationPeriod, setReservationPeriod] =
+    useState<ReservationPeriod>('upcoming')
 
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -210,8 +229,19 @@ export default function ReservationsPage() {
   }
 
   const filteredReservations = useMemo(() => {
+    const today = getTodayInLima()
+
     return reservations.filter(
       (reservation) => {
+        const isPast = reservation.check_out < today
+
+        if (
+          (reservationPeriod === 'upcoming' && isPast) ||
+          (reservationPeriod === 'history' && !isPast)
+        ) {
+          return false
+        }
+
         /*
          * CASA
          */
@@ -317,6 +347,7 @@ export default function ReservationsPage() {
   }, [
     reservations,
     getPropertyName,
+    reservationPeriod,
     propertyFilter,
     reservationStatusFilter,
     paymentStatusFilter,
@@ -377,6 +408,7 @@ export default function ReservationsPage() {
   }, [filteredReservations])
 
   function clearFilters() {
+    setReservationPeriod('upcoming')
     setPropertyFilter('all')
     setReservationStatusFilter('all')
     setPaymentStatusFilter('all')
@@ -649,18 +681,48 @@ export default function ReservationsPage() {
 
         <div className="mt-8 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-4">
 
             <h2 className="text-lg font-bold text-gray-950">
               Filtros
             </h2>
 
-            <button
-              onClick={clearFilters}
-              className="text-sm font-bold text-gray-600 hover:text-gray-950"
-            >
-              Limpiar filtros
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="inline-flex rounded-lg border border-gray-300 bg-gray-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => setReservationPeriod('upcoming')}
+                  aria-pressed={reservationPeriod === 'upcoming'}
+                  className={`rounded-md px-4 py-2 text-sm font-bold transition-colors ${
+                    reservationPeriod === 'upcoming'
+                      ? 'bg-gray-950 text-white shadow-sm'
+                      : 'text-gray-700 hover:bg-white'
+                  }`}
+                >
+                  Próximas
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setReservationPeriod('history')}
+                  aria-pressed={reservationPeriod === 'history'}
+                  className={`rounded-md px-4 py-2 text-sm font-bold transition-colors ${
+                    reservationPeriod === 'history'
+                      ? 'bg-gray-950 text-white shadow-sm'
+                      : 'text-gray-700 hover:bg-white'
+                  }`}
+                >
+                  Historial
+                </button>
+              </div>
+
+              <button
+                onClick={clearFilters}
+                className="text-sm font-bold text-gray-600 hover:text-gray-950"
+              >
+                Limpiar filtros
+              </button>
+            </div>
 
           </div>
 
