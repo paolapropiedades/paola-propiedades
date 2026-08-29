@@ -211,14 +211,6 @@ export default function ReservationsPage() {
     return deadline.toISOString().split('T')[0]
   }
 
-  function formatDateTime(value: string) {
-    return new Intl.DateTimeFormat('es-PE', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-      timeZone: 'America/Lima',
-    }).format(new Date(value))
-  }
-
   function getPaymentStatus(
     reservation: Reservation
   ) {
@@ -621,47 +613,40 @@ export default function ReservationsPage() {
     guestList: GuestList
   ) {
     const propertyName = getPropertyName(reservation.property_id)
-    const deadline = getGuestListDeadline(reservation.check_in)
-
-    const guestRows = guestList.guests.map((guest, index) => ({
-      'N°': index + 1,
-      'N° Reserva': reservation.reservation_number,
-      Propiedad: propertyName,
-      'Check-in': formatDate(reservation.check_in),
-      'Fecha límite': formatDate(deadline),
-      'Fecha de envío': formatDateTime(guestList.submitted_at),
-      'Nombre completo': guest.full_name,
-      DNI: guest.dni,
-      Edad: guest.age,
-    }))
-
-    const vehicleRows =
-      guestList.vehicle_plates.length > 0
-        ? guestList.vehicle_plates.map((plate, index) => ({
-            Vehículo: index + 1,
-            Placa: plate,
-          }))
-        : [{ Vehículo: '', Placa: 'Sin vehículos registrados' }]
+    const rows: Array<Array<string | number>> = [
+      ['Nombre', 'DNI', 'Edad', 'Propiedad', 'Check-in', 'Check-out'],
+      ...guestList.guests.map((guest) => [
+        guest.full_name,
+        guest.dni,
+        guest.age,
+        propertyName,
+        formatDate(reservation.check_in),
+        formatDate(reservation.check_out),
+      ]),
+      [],
+      ['Vehículos'],
+      ['Vehículo', 'Placa'],
+      ...(guestList.vehicle_plates.length > 0
+        ? guestList.vehicle_plates.map((plate, index) => [
+            index + 1,
+            plate,
+          ])
+        : [['—', 'Sin vehículos registrados']]),
+    ]
 
     const workbook = utils.book_new()
-    const guestsWorksheet = utils.json_to_sheet(guestRows)
-    const vehiclesWorksheet = utils.json_to_sheet(vehicleRows)
+    const worksheet = utils.aoa_to_sheet(rows)
 
-    guestsWorksheet['!cols'] = [
-      { wch: 6 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 14 },
-      { wch: 14 },
-      { wch: 20 },
+    worksheet['!cols'] = [
       { wch: 32 },
       { wch: 18 },
       { wch: 8 },
+      { wch: 18 },
+      { wch: 14 },
+      { wch: 14 },
     ]
-    vehiclesWorksheet['!cols'] = [{ wch: 12 }, { wch: 24 }]
 
-    utils.book_append_sheet(workbook, guestsWorksheet, 'Huéspedes')
-    utils.book_append_sheet(workbook, vehiclesWorksheet, 'Vehículos')
+    utils.book_append_sheet(workbook, worksheet, 'Lista')
 
     writeFileXLSX(
       workbook,
@@ -1086,51 +1071,64 @@ export default function ReservationsPage() {
 
           ) : (
 
-            <div className="overflow-x-auto">
+            <div className="w-full">
 
-              <table className="w-full min-w-[1550px] border-collapse">
+              <table className="w-full table-fixed border-collapse text-xs xl:text-sm">
+
+                <colgroup>
+                  <col className="w-[9%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[12%]" />
+                </colgroup>
 
                 <thead className="bg-gray-100">
 
-                  <tr className="text-left text-xs font-bold uppercase tracking-wide text-gray-700">
+                  <tr className="text-left text-[10px] font-bold uppercase tracking-wide text-gray-700 xl:text-xs">
 
-                    <th className="p-4">
+                    <th className="p-2">
                       Casa
                     </th>
 
-                    <th className="p-4">
+                    <th className="p-2">
                       Inquilino
                     </th>
 
-                    <th className="p-4">
+                    <th className="p-2">
                       Check-in
                     </th>
 
-                    <th className="p-4">
+                    <th className="p-2">
                       Check-out
                     </th>
 
-                    <th className="p-4 text-right">
+                    <th className="p-2 text-right">
                       Total
                     </th>
 
-                    <th className="p-4 text-right">
+                    <th className="p-2 text-right">
                       Pagado
                     </th>
 
-                    <th className="p-4 text-right">
+                    <th className="p-2 text-right">
                       Pendiente
                     </th>
 
-                    <th className="p-4">
+                    <th className="p-2">
                       Pago
                     </th>
 
-                    <th className="p-4">
+                    <th className="p-2">
                       Reserva
                     </th>
 
-                    <th className="p-4">
+                    <th className="p-2">
                       Lista de huéspedes
                     </th>
 
@@ -1189,14 +1187,14 @@ export default function ReservationsPage() {
                           className="border-t border-gray-200 hover:bg-gray-50"
                         >
 
-                          <td className="p-4 font-bold text-gray-950">
+                          <td className="break-words p-2 font-bold text-gray-950">
                             {getPropertyName(
                               reservation.property_id
                             )}
                           </td>
 
 
-                          <td className="p-4">
+                          <td className="min-w-0 break-words p-2">
 
                             <p className="font-semibold text-gray-950">
                               {reservation.tenant_full_name ??
@@ -1205,7 +1203,7 @@ export default function ReservationsPage() {
 
                             {reservation.tenant_email && (
 
-                              <p className="mt-1 text-xs text-gray-600">
+                              <p className="mt-1 break-all text-[10px] text-gray-600 xl:text-xs">
                                 {
                                   reservation.tenant_email
                                 }
@@ -1216,21 +1214,21 @@ export default function ReservationsPage() {
                           </td>
 
 
-                          <td className="p-4 font-medium text-gray-800">
+                          <td className="p-2 font-medium text-gray-800">
                             {formatDate(
                               reservation.check_in
                             )}
                           </td>
 
 
-                          <td className="p-4 font-medium text-gray-800">
+                          <td className="p-2 font-medium text-gray-800">
                             {formatDate(
                               reservation.check_out
                             )}
                           </td>
 
 
-                          <td className="p-4 text-right font-bold text-gray-950">
+                          <td className="p-2 text-right font-bold text-gray-950">
                             US${' '}
                             {formatMoney(
                               total
@@ -1238,7 +1236,7 @@ export default function ReservationsPage() {
                           </td>
 
 
-                          <td className="p-4 text-right font-bold text-green-700">
+                          <td className="p-2 text-right font-bold text-green-700">
                             US${' '}
                             {formatMoney(
                               paid
@@ -1246,7 +1244,7 @@ export default function ReservationsPage() {
                           </td>
 
 
-                          <td className="p-4 text-right font-bold text-gray-950">
+                          <td className="p-2 text-right font-bold text-gray-950">
                             {isCancelled
                               ? '—'
                               : `US$ ${formatMoney(
@@ -1255,7 +1253,7 @@ export default function ReservationsPage() {
                           </td>
 
 
-                          <td className="p-4">
+                          <td className="break-words p-2">
 
                             <span
                               className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
@@ -1276,7 +1274,7 @@ export default function ReservationsPage() {
                           </td>
 
 
-                          <td className="p-4">
+                          <td className="break-words p-2">
 
                             <span
                               className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
@@ -1300,7 +1298,7 @@ export default function ReservationsPage() {
                           </td>
 
 
-                          <td className="p-4">
+                          <td className="break-words p-2">
 
                             {guestList ? (
 
