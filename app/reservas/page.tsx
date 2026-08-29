@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { utils, writeFileXLSX } from 'xlsx'
+import { BrandLogo } from '@/app/components/brand-logo'
 import { LogoutButton } from '@/app/components/logout-button'
 
 type Property = {
@@ -584,12 +585,17 @@ export default function ReservationsPage() {
               ← Volver al calendario
             </Link>
 
+            <BrandLogo
+              className="mt-3 h-auto w-64 max-w-full"
+              priority
+            />
+
             <h1 className="mt-4 text-3xl font-bold text-gray-950">
               Reservas
             </h1>
 
             <p className="mt-1 font-medium text-gray-700">
-              Gestión y reportes de Paola Propiedades
+              Gestión y reportes
             </p>
 
           </div>

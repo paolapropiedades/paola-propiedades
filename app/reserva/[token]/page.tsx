@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { BrandLogo } from '@/app/components/brand-logo'
 
 type Reservation = {
   reservation_number: string
@@ -263,9 +264,7 @@ export default function ReservationPage({
 
         <div className="w-full max-w-md rounded-2xl border border-gray-300 bg-white p-8 text-center shadow-sm">
 
-          <h1 className="text-2xl font-bold text-gray-950">
-            Paola Propiedades
-          </h1>
+          <BrandLogo className="mx-auto h-auto w-72 max-w-full" />
 
           <p className="mt-5 font-medium text-red-700">
             {errorMessage}
@@ -296,9 +295,10 @@ export default function ReservationPage({
 
         <div className="text-center">
 
-          <h1 className="text-3xl font-bold text-gray-950">
-            Paola Propiedades
-          </h1>
+          <BrandLogo
+            className="mx-auto h-auto w-80 max-w-full"
+            priority
+          />
 
           <p className="mt-2 font-medium text-gray-700">
             Confirma tu reserva

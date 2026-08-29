@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { BrandLogo } from '@/app/components/brand-logo'
 import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
@@ -47,13 +48,10 @@ export default function LoginPage() {
 
         <div className="text-center">
 
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-gray-950 text-xl font-bold text-white">
-            PP
-          </div>
-
-          <h1 className="mt-5 text-2xl font-bold text-gray-950">
-            Paola Propiedades
-          </h1>
+          <BrandLogo
+            className="mx-auto h-auto w-80 max-w-full"
+            priority
+          />
 
           <p className="mt-2 font-medium text-gray-600">
             Panel de administración

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { BrandLogo } from '@/app/components/brand-logo'
 import { LogoutButton } from '@/app/components/logout-button'
 
 type Property = {
@@ -560,9 +561,10 @@ export default function Home() {
         <div className="flex items-center justify-between gap-4">
 
           <div>
-            <h1 className="text-3xl font-bold text-gray-950">
-              Paola Propiedades
-            </h1>
+            <BrandLogo
+              className="h-auto w-72 max-w-full"
+              priority
+            />
 
             <p className="mt-1 font-medium text-gray-700">
               Administración de propiedades
