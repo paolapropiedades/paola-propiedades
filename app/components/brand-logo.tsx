@@ -13,8 +13,8 @@ export function BrandLogo({
     <Image
       src="/paola-propiedades-logo.png"
       alt="Paola Cornejo - Propiedades en la playa"
-      width={2172}
-      height={724}
+      width={2048}
+      height={768}
       priority={priority}
       className={className}
     />
