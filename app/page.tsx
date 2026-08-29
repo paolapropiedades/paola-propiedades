@@ -969,7 +969,7 @@ export default function Home() {
                 </div>
 
                 <label className="mt-5 block text-sm font-semibold text-gray-900">
-                  Link para el tenant
+                  Link para el inquilino
                 </label>
 
                 <input

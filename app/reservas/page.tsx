@@ -996,7 +996,7 @@ export default function ReservationsPage() {
                     </th>
 
                     <th className="p-4">
-                      Tenant
+                      Inquilino
                     </th>
 
                     <th className="p-4">

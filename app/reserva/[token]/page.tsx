@@ -1,6 +1,7 @@
 'use client'
 
 import { use, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { BrandLogo } from '@/app/components/brand-logo'
 
@@ -155,7 +156,7 @@ export default function ReservationPage({
     if (!accepted) {
 
       setErrorMessage(
-        'Debes confirmar que los datos proporcionados son correctos.'
+        'Debes leer y aceptar los Términos y Condiciones de Arrendamiento para confirmar la reserva.'
       )
 
       return
@@ -178,6 +179,7 @@ export default function ReservationPage({
             p_tenant_dni: dni.trim(),
             p_tenant_phone: phone.trim(),
             p_tenant_email: email.trim(),
+            p_terms_accepted: accepted,
           }
         )
 
@@ -581,9 +583,10 @@ export default function ReservationPage({
 
               {/* CONFIRMACIÓN */}
 
-              <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl bg-gray-100 p-4">
+              <div className="mt-6 flex items-start gap-3 rounded-xl bg-gray-100 p-4">
 
                 <input
+                  id="terms-accepted"
                   type="checkbox"
                   checked={accepted}
                   onChange={(e) =>
@@ -594,11 +597,26 @@ export default function ReservationPage({
                   className="mt-1 h-4 w-4"
                 />
 
-                <span className="text-sm font-medium text-gray-800">
-                  Confirmo que los datos proporcionados son correctos y deseo confirmar esta reserva.
+                <span
+                  id="terms-accepted-label"
+                  className="text-sm font-medium text-gray-800"
+                >
+                  <label htmlFor="terms-accepted" className="cursor-pointer">
+                    He leído y acepto los{' '}
+                  </label>
+
+                  <Link
+                    href="/terminos-y-condiciones"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-bold text-gray-950 underline underline-offset-2 hover:text-gray-700"
+                  >
+                    Términos y Condiciones de Arrendamiento
+                  </Link>
+                  .
                 </span>
 
-              </label>
+              </div>
 
 
               {/* ERROR */}

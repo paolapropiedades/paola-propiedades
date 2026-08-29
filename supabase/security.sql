@@ -44,6 +44,12 @@ create unique index if not exists reservations_confirmation_token_uidx
   on public.reservations (confirmation_token)
   where confirmation_token is not null;
 
+alter table public.reservations
+  add column if not exists terms_accepted_at timestamptz;
+
+alter table public.reservations
+  add column if not exists terms_version text;
+
 -- ---------------------------------------------------------------------------
 -- 1. RLS y privilegios de tabla.
 -- ---------------------------------------------------------------------------
@@ -225,7 +231,7 @@ grant execute
 
 -- ---------------------------------------------------------------------------
 -- 3. RPC pública de confirmación por token.
--- Solo acepta los cinco campos del tenant y pending -> confirmed.
+-- Solo acepta los cinco campos del tenant, la aceptación y pending -> confirmed.
 -- ---------------------------------------------------------------------------
 
 drop function if exists public.confirm_reservation_by_token(
@@ -237,13 +243,24 @@ drop function if exists public.confirm_reservation_by_token(
   text
 );
 
+drop function if exists public.confirm_reservation_by_token(
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  boolean
+);
+
 create function public.confirm_reservation_by_token(
   p_confirmation_token text,
   p_tenant_full_name text,
   p_tenant_address text,
   p_tenant_dni text,
   p_tenant_phone text,
-  p_tenant_email text
+  p_tenant_email text,
+  p_terms_accepted boolean
 )
 returns boolean
 language plpgsql
@@ -256,6 +273,12 @@ begin
     or pg_catalog.char_length(p_confirmation_token) not between 32 and 128
   then
     return false;
+  end if;
+
+  if p_terms_accepted is distinct from true then
+    raise exception using
+      errcode = '22023',
+      message = 'Debes aceptar los Términos y Condiciones de Arrendamiento.';
   end if;
 
   if pg_catalog.char_length(pg_catalog.btrim(coalesce(p_tenant_full_name, ''))) not between 1 and 200
@@ -278,7 +301,9 @@ begin
     tenant_phone = pg_catalog.btrim(p_tenant_phone),
     tenant_email = pg_catalog.btrim(p_tenant_email),
     reservation_status = 'confirmed',
-    confirmed_at = pg_catalog.clock_timestamp()
+    confirmed_at = pg_catalog.clock_timestamp(),
+    terms_accepted_at = pg_catalog.clock_timestamp(),
+    terms_version = '2026-08-28'
   where reservation.confirmation_token::text = p_confirmation_token
     and reservation.reservation_status = 'pending';
 
@@ -287,11 +312,11 @@ end
 $$;
 
 revoke all privileges
-  on function public.confirm_reservation_by_token(text, text, text, text, text, text)
+  on function public.confirm_reservation_by_token(text, text, text, text, text, text, boolean)
   from public, anon, authenticated;
 
 grant execute
-  on function public.confirm_reservation_by_token(text, text, text, text, text, text)
+  on function public.confirm_reservation_by_token(text, text, text, text, text, text, boolean)
   to anon, authenticated;
 
 -- ---------------------------------------------------------------------------
