@@ -1071,7 +1071,183 @@ export default function ReservationsPage() {
 
           ) : (
 
-            <div className="w-full">
+            <>
+            <div className="divide-y divide-gray-200 md:hidden">
+
+              {filteredReservations.map(
+                (reservation) => {
+                  const total = Number(
+                    reservation.total_price || 0
+                  )
+                  const paid = Number(
+                    reservation.amount_paid || 0
+                  )
+                  const remaining = Math.max(
+                    0,
+                    total - paid
+                  )
+                  const isCancelled =
+                    reservation.reservation_status ===
+                    'cancelled'
+                  const paymentStatus =
+                    getPaymentStatus(reservation)
+                  const guestList = guestLists.find(
+                    (list) =>
+                      list.reservation_id ===
+                      reservation.id
+                  )
+                  const guestListDeadline =
+                    getGuestListDeadline(
+                      reservation.check_in
+                    )
+
+                  return (
+                    <article
+                      key={reservation.id}
+                      className="space-y-4 p-5"
+                    >
+                      <div>
+                        <p className="text-lg font-bold text-gray-950">
+                          {getPropertyName(
+                            reservation.property_id
+                          )}
+                        </p>
+                        <p className="mt-1 font-semibold text-gray-900">
+                          {reservation.tenant_full_name ??
+                            'Pendiente de confirmar'}
+                        </p>
+                        {reservation.tenant_email && (
+                          <p className="mt-1 break-all text-sm text-gray-600">
+                            {reservation.tenant_email}
+                          </p>
+                        )}
+                      </div>
+
+                      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                        <div>
+                          <dt className="font-medium text-gray-500">
+                            Check-in
+                          </dt>
+                          <dd className="mt-1 font-semibold text-gray-900">
+                            {formatDate(
+                              reservation.check_in
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="font-medium text-gray-500">
+                            Check-out
+                          </dt>
+                          <dd className="mt-1 font-semibold text-gray-900">
+                            {formatDate(
+                              reservation.check_out
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="font-medium text-gray-500">
+                            Total
+                          </dt>
+                          <dd className="mt-1 font-bold text-gray-950">
+                            US$ {formatMoney(total)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="font-medium text-gray-500">
+                            Pagado
+                          </dt>
+                          <dd className="mt-1 font-bold text-green-700">
+                            US$ {formatMoney(paid)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="font-medium text-gray-500">
+                            Pendiente
+                          </dt>
+                          <dd className="mt-1 font-bold text-gray-950">
+                            {isCancelled
+                              ? '—'
+                              : `US$ ${formatMoney(
+                                  remaining
+                                )}`}
+                          </dd>
+                        </div>
+                      </dl>
+
+                      <div className="flex flex-wrap gap-2">
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                            paymentStatus === 'paid'
+                              ? 'bg-green-100 text-green-800'
+                              : paymentStatus ===
+                                  'partial'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {paymentStatusText(reservation)}
+                        </span>
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                            reservation.reservation_status ===
+                            'confirmed'
+                              ? 'bg-green-100 text-green-800'
+                              : reservation.reservation_status ===
+                                  'pending'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-gray-200 text-gray-800'
+                          }`}
+                        >
+                          {reservationStatusText(
+                            reservation.reservation_status
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          Lista de huéspedes
+                        </p>
+                        {guestList ? (
+                          <div className="mt-2 flex items-center justify-between gap-3">
+                            <p className="text-sm font-bold text-green-700">
+                              Recibida ({guestList.guests.length})
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                downloadGuestList(
+                                  reservation,
+                                  guestList
+                                )
+                              }
+                              className="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-bold text-gray-800 hover:bg-gray-100"
+                            >
+                              ↓ Descargar
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="mt-2">
+                            <p className="text-sm font-bold text-amber-700">
+                              Pendiente
+                            </p>
+                            <p className="mt-1 text-sm text-gray-600">
+                              Límite:{' '}
+                              {formatDate(
+                                guestListDeadline
+                              )}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </article>
+                  )
+                }
+              )}
+
+            </div>
+
+            <div className="hidden w-full md:block">
 
               <table className="w-full table-fixed border-collapse text-xs xl:text-sm">
 
@@ -1350,6 +1526,7 @@ export default function ReservationsPage() {
               </table>
 
             </div>
+            </>
 
           )}
 
