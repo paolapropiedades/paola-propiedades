@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { utils, writeFileXLSX } from 'xlsx'
 import { BrandLogo } from '@/app/components/brand-logo'
 import { LogoutButton } from '@/app/components/logout-button'
+import { AdminMobileNav } from '@/app/components/admin-mobile-nav'
 
 type Property = {
   id: number
@@ -82,6 +83,7 @@ export default function ReservationsPage() {
   const [dateTo, setDateTo] = useState('')
 
   const [search, setSearch] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   const loadData = useCallback(async () => {
     const {
@@ -449,6 +451,40 @@ export default function ReservationsPage() {
     }
   }, [filteredReservations])
 
+  const alerts = useMemo(() => {
+    const today = getTodayInLima()
+    const nextWeek = new Date(`${today}T00:00:00Z`)
+    nextWeek.setUTCDate(nextWeek.getUTCDate() + 7)
+    const nextWeekDate = nextWeek.toISOString().split('T')[0]
+    const active = reservations.filter(
+      (reservation) => reservation.reservation_status !== 'cancelled'
+    )
+
+    return {
+      pendingConfirmation: active.filter(
+        (reservation) => reservation.reservation_status === 'pending'
+      ).length,
+      pendingPayment: active.filter(
+        (reservation) =>
+          Number(reservation.amount_paid || 0) <
+          Number(reservation.total_price || 0)
+      ).length,
+      upcomingCheckIns: active.filter(
+        (reservation) =>
+          reservation.check_in >= today &&
+          reservation.check_in <= nextWeekDate
+      ).length,
+      missingGuestLists: active.filter(
+        (reservation) =>
+          reservation.reservation_status === 'confirmed' &&
+          getGuestListDeadline(reservation.check_in) <= today &&
+          !guestLists.some(
+            (list) => list.reservation_id === reservation.id
+          )
+      ).length,
+    }
+  }, [reservations, guestLists])
+
   function clearFilters() {
     setReservationPeriod('upcoming')
     setPropertyFilter('all')
@@ -656,9 +692,9 @@ export default function ReservationsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50 pb-24 md:pb-0">
 
-      <div className="mx-auto max-w-[1600px] p-8">
+      <div className="mx-auto max-w-[1600px] p-4 sm:p-8">
 
         {/* HEADER */}
 
@@ -708,6 +744,8 @@ export default function ReservationsPage() {
 
 
         {/* RESUMEN */}
+
+        <AdminMobileNav current="reservations" />
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
@@ -770,6 +808,25 @@ export default function ReservationsPage() {
 
         </div>
 
+        <section aria-labelledby="alerts-title" className="mt-8">
+          <h2 id="alerts-title" className="text-lg font-bold text-gray-950">
+            Atención requerida
+          </h2>
+          <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {[
+              ['Sin confirmar', alerts.pendingConfirmation, 'bg-amber-50 text-amber-900'],
+              ['Pagos pendientes', alerts.pendingPayment, 'bg-red-50 text-red-900'],
+              ['Ingresos en 7 días', alerts.upcomingCheckIns, 'bg-blue-50 text-blue-900'],
+              ['Listas vencidas', alerts.missingGuestLists, 'bg-orange-50 text-orange-900'],
+            ].map(([label, count, color]) => (
+              <div key={String(label)} className={`rounded-xl border border-gray-200 p-4 ${color}`}>
+                <p className="text-2xl font-bold">{count}</p>
+                <p className="mt-1 text-sm font-semibold">{label}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
 
         {/* FILTROS */}
 
@@ -780,6 +837,26 @@ export default function ReservationsPage() {
             <h2 className="text-lg font-bold text-gray-950">
               Filtros
             </h2>
+
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((current) => !current)}
+              aria-expanded={filtersOpen}
+              aria-controls="reservation-filters"
+              className="min-h-11 rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-800 md:hidden"
+            >
+              {filtersOpen ? 'Ocultar filtros' : 'Mostrar filtros'}
+              {' · '}
+              {[
+                propertyFilter !== 'all',
+                reservationStatusFilter !== 'all',
+                paymentStatusFilter !== 'all',
+                Boolean(dateFrom),
+                Boolean(dateTo),
+                Boolean(search.trim()),
+              ].filter(Boolean).length}{' '}
+              activos
+            </button>
 
             <div className="flex flex-wrap items-center gap-3">
               <div className="inline-flex rounded-lg border border-gray-300 bg-gray-100 p-1">
@@ -821,7 +898,10 @@ export default function ReservationsPage() {
           </div>
 
 
-          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div
+            id="reservation-filters"
+            className={`${filtersOpen ? 'grid' : 'hidden'} mt-5 gap-4 md:grid md:grid-cols-2 xl:grid-cols-3`}
+          >
 
             {/* BUSCADOR */}
 
@@ -1203,6 +1283,13 @@ export default function ReservationsPage() {
                           )}
                         </span>
                       </div>
+
+                      <Link
+                        href="/"
+                        className="inline-flex min-h-11 items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-bold text-gray-800 hover:bg-gray-50"
+                      >
+                        Ver en calendario
+                      </Link>
 
                       <div className="rounded-lg bg-gray-50 p-3">
                         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">

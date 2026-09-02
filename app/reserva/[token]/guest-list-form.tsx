@@ -57,6 +57,7 @@ export function GuestListForm({ token }: { token: string }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [isDirty, setIsDirty] = useState(false)
   const [message, setMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -91,6 +92,7 @@ export function GuestListForm({ token }: { token: string }) {
       guestList.vehicle_plates[0] ?? '',
       guestList.vehicle_plates[1] ?? '',
     ])
+    setIsDirty(false)
     setLoading(false)
   }, [token])
 
@@ -100,7 +102,19 @@ export function GuestListForm({ token }: { token: string }) {
     loadGuestList()
   }, [loadGuestList])
 
+  useEffect(() => {
+    if (!open || !isDirty) return
+
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+    }
+
+    window.addEventListener('beforeunload', warnBeforeLeaving)
+    return () => window.removeEventListener('beforeunload', warnBeforeLeaving)
+  }, [open, isDirty])
+
   function updateGuest(index: number, field: keyof Guest, value: string) {
+    setIsDirty(true)
     setGuests((current) =>
       current.map((guest, guestIndex) =>
         guestIndex === index ? { ...guest, [field]: value } : guest
@@ -110,11 +124,13 @@ export function GuestListForm({ token }: { token: string }) {
 
   function addGuest() {
     if (!metadata || guests.length >= metadata.max_guests) return
+    setIsDirty(true)
     setGuests((current) => [...current, emptyGuest()])
   }
 
   function removeGuest(index: number) {
     if (guests.length === 1) return
+    setIsDirty(true)
     setGuests((current) =>
       current.filter((_, guestIndex) => guestIndex !== index)
     )
@@ -221,6 +237,15 @@ export function GuestListForm({ token }: { token: string }) {
 
       {open && (
         <div className="mt-6 border-t border-blue-200 pt-6">
+          <div className="mb-4 flex items-center justify-between rounded-lg bg-white px-4 py-3 text-sm">
+            <span className="font-semibold text-gray-700">Progreso</span>
+            <strong className="text-gray-950">
+              {guests.filter((guest) =>
+                guest.full_name.trim() && guest.dni.trim() && guest.age
+              ).length}{' '}
+              de {metadata.max_guests} huéspedes completos
+            </strong>
+          </div>
           <div className="space-y-4">
             {guests.map((guest, index) => (
               <div key={index} className="rounded-xl border border-gray-200 bg-white p-4">
@@ -243,6 +268,7 @@ export function GuestListForm({ token }: { token: string }) {
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <input
                     type="text"
+                    inputMode="numeric"
                     maxLength={200}
                     value={guest.full_name}
                     onChange={(event) =>
@@ -267,6 +293,7 @@ export function GuestListForm({ token }: { token: string }) {
 
                   <input
                     type="number"
+                    inputMode="numeric"
                     min={0}
                     max={120}
                     value={guest.age}
@@ -299,11 +326,14 @@ export function GuestListForm({ token }: { token: string }) {
                 maxLength={20}
                 value={plate}
                 onChange={(event) =>
-                  setPlates((current) =>
-                    current.map((value, plateIndex) =>
-                      plateIndex === index ? event.target.value : value
+                  {
+                    setIsDirty(true)
+                    setPlates((current) =>
+                      current.map((value, plateIndex) =>
+                        plateIndex === index ? event.target.value : value
+                      )
                     )
-                  )
+                  }
                 }
                 placeholder={`Placa vehículo ${index + 1} (opcional)`}
                 aria-label={`Placa del vehículo ${index + 1}`}

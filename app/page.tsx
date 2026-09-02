@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { BrandLogo } from '@/app/components/brand-logo'
 import { LogoutButton } from '@/app/components/logout-button'
+import { AdminMobileNav } from '@/app/components/admin-mobile-nav'
 
 type Property = {
   id: number
@@ -551,18 +552,27 @@ export default function Home() {
   const selectedRemaining =
     Math.max(0, selectedTotal - selectedPaid)
 
-  return (
-    <main className="min-h-screen bg-gray-50">
+  const upcomingReservations = reservations
+    .filter(
+      (reservation) =>
+        reservation.check_out >=
+        new Date().toISOString().split('T')[0]
+    )
+    .sort((a, b) => a.check_in.localeCompare(b.check_in))
+    .slice(0, 5)
 
-      <div className="mx-auto max-w-[1600px] p-8">
+  return (
+    <main className="min-h-screen bg-gray-50 pb-24 md:pb-0">
+
+      <div className="mx-auto max-w-[1600px] p-4 sm:p-8">
 
         {/* HEADER */}
 
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
 
           <div>
             <BrandLogo
-              className="h-auto w-72 max-w-full"
+              className="h-auto w-56 max-w-full sm:w-72"
               priority
             />
 
@@ -571,7 +581,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
 
             <LogoutButton />
 
@@ -588,7 +598,7 @@ export default function Home() {
                 setCreatedReservationLink('')
                 setShowModal(true)
               }}
-              className="rounded-lg bg-gray-950 px-5 py-3 text-sm font-semibold text-white hover:bg-gray-800"
+              className="min-h-11 flex-1 rounded-lg bg-gray-950 px-5 py-3 text-sm font-semibold text-white hover:bg-gray-800 sm:flex-none"
             >
               + Nueva reserva
             </button>
@@ -596,6 +606,50 @@ export default function Home() {
           </div>
 
         </div>
+
+        <AdminMobileNav
+          current="calendar"
+          onNewReservation={() => {
+            setMessage('')
+            setCreatedReservationLink('')
+            setShowModal(true)
+          }}
+        />
+
+        <section className="mt-8 md:hidden" aria-labelledby="upcoming-title">
+          <div className="flex items-center justify-between">
+            <h2 id="upcoming-title" className="text-lg font-bold text-gray-950">
+              Próximas reservas
+            </h2>
+            <Link href="/reservas" className="text-sm font-bold text-blue-700">
+              Ver todas
+            </Link>
+          </div>
+          <div className="mt-3 space-y-3">
+            {upcomingReservations.length === 0 ? (
+              <p className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
+                No hay próximas reservas.
+              </p>
+            ) : upcomingReservations.map((reservation) => (
+              <button
+                key={reservation.id}
+                type="button"
+                onClick={() => openReservation(reservation)}
+                className="min-h-11 w-full rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm"
+              >
+                <span className="block font-bold text-gray-950">
+                  {properties.find((property) => property.id === reservation.property_id)?.name ?? 'Propiedad'}
+                </span>
+                <span className="mt-1 block text-sm font-medium text-gray-700">
+                  {formatDate(reservation.check_in)} – {formatDate(reservation.check_out)}
+                </span>
+                <span className="mt-1 block text-sm text-gray-600">
+                  {reservation.tenant_full_name ?? 'Pendiente de confirmar'}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
 
 
         {/* CALENDARIO */}
@@ -618,6 +672,7 @@ export default function Home() {
 
               <button
                 onClick={previousMonth}
+                aria-label="Mes anterior"
                 className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-900 hover:bg-gray-100"
               >
                 ←
@@ -634,6 +689,7 @@ export default function Home() {
 
               <button
                 onClick={nextMonth}
+                aria-label="Mes siguiente"
                 className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-900 hover:bg-gray-100"
               >
                 →
