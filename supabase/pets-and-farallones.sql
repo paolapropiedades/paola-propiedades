@@ -39,7 +39,7 @@ set search_path = ''
 rows 1
 as $$
   select property.max_guests,
-         (reservation.check_in - 7)::date,
+         (reservation.check_in - 1)::date,
          guest_list.submitted_at,
          coalesce(guest_list.guests, '[]'::jsonb),
          coalesce(guest_list.vehicle_plates, '{}'::text[]),

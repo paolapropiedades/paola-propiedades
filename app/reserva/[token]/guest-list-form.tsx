@@ -234,7 +234,7 @@ export function GuestListForm({ token }: { token: string }) {
 
       <p className="mt-2 text-sm font-medium text-gray-700">
         Envíala hasta el{' '}
-        <strong>{formatDate(metadata.submission_deadline)}</strong>, una semana
+        <strong>{formatDate(metadata.submission_deadline)}</strong>, 24 horas
         antes del ingreso.
       </p>
 

@@ -234,7 +234,7 @@ export default function ReservationsPage() {
 
   function getGuestListDeadline(checkIn: string) {
     const deadline = new Date(`${checkIn}T00:00:00Z`)
-    deadline.setUTCDate(deadline.getUTCDate() - 7)
+    deadline.setUTCDate(deadline.getUTCDate() - 1)
     return deadline.toISOString().split('T')[0]
   }
 
