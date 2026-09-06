@@ -14,6 +14,7 @@ type Reservation = {
   total_price: number
   reservation_status: string
   property_name: string
+  currency: 'USD' | 'PEN'
 }
 
 export default function ReservationPage({
@@ -399,7 +400,7 @@ export default function ReservationPage({
 
                 <strong className="text-lg text-gray-950">
 
-                  US${' '}
+                  {reservation.currency === 'PEN' ? 'S/' : 'US$'}{' '}
 
                   {Number(
                     reservation.total_price

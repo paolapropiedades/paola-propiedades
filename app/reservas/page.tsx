@@ -32,6 +32,7 @@ type Reservation = {
   tenant_phone: string | null
   tenant_email: string | null
   created_at: string
+  currency: 'USD' | 'PEN'
 }
 
 type GuestList = {
@@ -124,7 +125,8 @@ export default function ReservationsPage() {
         tenant_address,
         tenant_phone,
         tenant_email,
-        created_at
+        created_at,
+        currency
       `)
       .order('check_in', {
         ascending: false,
@@ -189,6 +191,10 @@ export default function ReservationsPage() {
         maximumFractionDigits: 2,
       }
     )
+  }
+
+  function currencyLabel(currency: 'USD' | 'PEN') {
+    return currency === 'PEN' ? 'S/' : 'US$'
   }
 
   function formatDate(date: string) {
@@ -451,6 +457,25 @@ export default function ReservationsPage() {
     }
   }, [filteredReservations])
 
+  const summaryByCurrency = useMemo(() => {
+    const initial = {
+      USD: { total: 0, paid: 0, remaining: 0 },
+      PEN: { total: 0, paid: 0, remaining: 0 },
+    }
+
+    return filteredReservations
+      .filter((reservation) => reservation.reservation_status !== 'cancelled')
+      .reduce((totals, reservation) => {
+        const currency = reservation.currency ?? 'USD'
+        const total = Number(reservation.total_price || 0)
+        const paid = Number(reservation.amount_paid || 0)
+        totals[currency].total += total
+        totals[currency].paid += paid
+        totals[currency].remaining += Math.max(total - paid, 0)
+        return totals
+      }, initial)
+  }, [filteredReservations])
+
   const alerts = useMemo(() => {
     const today = getTodayInLima()
     const nextWeek = new Date(`${today}T00:00:00Z`)
@@ -575,6 +600,8 @@ export default function ReservationsPage() {
 
             'Total reserva':
               total,
+
+            Moneda: reservation.currency,
 
             Pagado:
               paid,
@@ -769,9 +796,8 @@ export default function ReservationsPage() {
             </p>
 
             <p className="mt-2 text-2xl font-bold text-gray-950">
-              US$ {formatMoney(
-                summary.totalValue
-              )}
+              US$ {formatMoney(summaryByCurrency.USD.total)}
+              <span className="mt-1 block text-lg">S/ {formatMoney(summaryByCurrency.PEN.total)}</span>
             </p>
 
           </div>
@@ -784,9 +810,8 @@ export default function ReservationsPage() {
             </p>
 
             <p className="mt-2 text-2xl font-bold text-green-700">
-              US$ {formatMoney(
-                summary.totalPaid
-              )}
+              US$ {formatMoney(summaryByCurrency.USD.paid)}
+              <span className="mt-1 block text-lg">S/ {formatMoney(summaryByCurrency.PEN.paid)}</span>
             </p>
 
           </div>
@@ -799,9 +824,8 @@ export default function ReservationsPage() {
             </p>
 
             <p className="mt-2 text-2xl font-bold text-red-700">
-              US$ {formatMoney(
-                summary.remaining
-              )}
+              US$ {formatMoney(summaryByCurrency.USD.remaining)}
+              <span className="mt-1 block text-lg">S/ {formatMoney(summaryByCurrency.PEN.remaining)}</span>
             </p>
 
           </div>
@@ -1229,7 +1253,7 @@ export default function ReservationsPage() {
                             Total
                           </dt>
                           <dd className="mt-1 font-bold text-gray-950">
-                            US$ {formatMoney(total)}
+                            {currencyLabel(reservation.currency)} {formatMoney(total)}
                           </dd>
                         </div>
                         <div>
@@ -1237,7 +1261,7 @@ export default function ReservationsPage() {
                             Pagado
                           </dt>
                           <dd className="mt-1 font-bold text-green-700">
-                            US$ {formatMoney(paid)}
+                            {currencyLabel(reservation.currency)} {formatMoney(paid)}
                           </dd>
                         </div>
                         <div>
@@ -1247,7 +1271,7 @@ export default function ReservationsPage() {
                           <dd className="mt-1 font-bold text-gray-950">
                             {isCancelled
                               ? '—'
-                              : `US$ ${formatMoney(
+                              : `${currencyLabel(reservation.currency)} ${formatMoney(
                                   remaining
                                 )}`}
                           </dd>
@@ -1492,7 +1516,7 @@ export default function ReservationsPage() {
 
 
                           <td className="p-2 text-right font-bold text-gray-950">
-                            US${' '}
+                            {currencyLabel(reservation.currency)}{' '}
                             {formatMoney(
                               total
                             )}
@@ -1500,7 +1524,7 @@ export default function ReservationsPage() {
 
 
                           <td className="p-2 text-right font-bold text-green-700">
-                            US${' '}
+                            {currencyLabel(reservation.currency)}{' '}
                             {formatMoney(
                               paid
                             )}
@@ -1510,7 +1534,7 @@ export default function ReservationsPage() {
                           <td className="p-2 text-right font-bold text-gray-950">
                             {isCancelled
                               ? '—'
-                              : `US$ ${formatMoney(
+                              : `${currencyLabel(reservation.currency)} ${formatMoney(
                                   remaining
                                 )}`}
                           </td>

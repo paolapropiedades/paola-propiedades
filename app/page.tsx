@@ -29,6 +29,7 @@ type Reservation = {
   total_price: number
   amount_paid: number
   payment_status: string
+  currency: 'USD' | 'PEN'
 }
 
 type Payment = {
@@ -37,6 +38,7 @@ type Payment = {
   amount: number
   payment_date: string
   created_at: string
+  currency: 'USD' | 'PEN'
 }
 
 export default function Home() {
@@ -51,6 +53,8 @@ export default function Home() {
   const [checkIn, setCheckIn] = useState('')
   const [checkOut, setCheckOut] = useState('')
   const [totalPriceInput, setTotalPriceInput] = useState('')
+  const [reservationCurrency, setReservationCurrency] =
+    useState<'USD' | 'PEN'>('USD')
 
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -105,7 +109,8 @@ export default function Home() {
           tenant_address,
           total_price,
           amount_paid,
-          payment_status
+          payment_status,
+          currency
         `)
         .neq('reservation_status', 'cancelled')
 
@@ -282,6 +287,10 @@ export default function Home() {
     })
   }
 
+  function currencyLabel(currency: 'USD' | 'PEN') {
+    return currency === 'PEN' ? 'S/' : 'US$'
+  }
+
   function getPropertyName(reservation: Reservation) {
     return (
       properties.find(
@@ -328,7 +337,7 @@ export default function Home() {
 
     if (totalPrice <= 0) {
       setMessage(
-        'El monto total debe ser mayor a US$ 0.'
+        `El monto total debe ser mayor a ${currencyLabel(reservationCurrency)} 0.`
       )
       return
     }
@@ -354,6 +363,7 @@ export default function Home() {
 
         // Este es el monto final ingresado por el admin.
         total_price: totalPrice,
+        currency: reservationCurrency,
 
         amount_paid: 0,
         reservation_status: 'pending',
@@ -410,6 +420,7 @@ export default function Home() {
     setCheckIn('')
     setCheckOut('')
     setTotalPriceInput('')
+    setReservationCurrency('USD')
     setMessage('')
     setCreatedReservationLink('')
   }
@@ -429,7 +440,7 @@ export default function Home() {
 
     if (!amount || amount <= 0) {
       setPaymentMessage(
-        'Ingresa un monto mayor a US$ 0.'
+        `Ingresa un monto mayor a ${currencyLabel(selectedReservation.currency)} 0.`
       )
       return
     }
@@ -443,7 +454,7 @@ export default function Home() {
 
     if (amount > remaining) {
       setPaymentMessage(
-        `El monto supera el saldo pendiente de US$ ${formatMoney(
+        `El monto supera el saldo pendiente de ${currencyLabel(selectedReservation.currency)} ${formatMoney(
           remaining
         )}.`
       )
@@ -453,11 +464,12 @@ export default function Home() {
     setRegisteringPayment(true)
 
     const { error } = await supabase.rpc(
-      'register_payment',
+      'register_payment_in_currency',
       {
         p_reservation_id: selectedReservation.id,
         p_amount: amount,
         p_payment_date: paymentDate,
+        p_currency: selectedReservation.currency,
       }
     )
 
@@ -935,7 +947,7 @@ export default function Home() {
                 <div className="mt-5">
 
                   <label className="text-sm font-semibold text-gray-900">
-                    Monto total de la reserva (US$)
+                    Monto total de la reserva
                   </label>
 
                   <input
@@ -973,11 +985,25 @@ export default function Home() {
 
                   <div className="mt-3 flex justify-between border-t border-gray-300 pt-3">
                     <span className="font-semibold text-gray-800">
-                      Monto total
+                      Moneda
                     </span>
 
-                    <strong className="text-lg text-gray-950">
-                      US$ {formatMoney(totalPrice)}
+                    <select
+                      value={reservationCurrency}
+                      onChange={(event) =>
+                        setReservationCurrency(event.target.value as 'USD' | 'PEN')
+                      }
+                      className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-950"
+                    >
+                      <option value="USD">Dólares (US$)</option>
+                      <option value="PEN">Soles (S/)</option>
+                    </select>
+                  </div>
+
+                  <div className="mt-3 flex justify-between">
+                    <span className="font-medium text-gray-700">Monto total</span>
+                    <strong className="text-gray-950">
+                      {currencyLabel(reservationCurrency)} {formatMoney(totalPrice)}
                     </strong>
                   </div>
 
@@ -1221,7 +1247,7 @@ export default function Home() {
                   </span>
 
                   <strong className="text-gray-950">
-                    US$ {formatMoney(selectedTotal)}
+                    {currencyLabel(selectedReservation.currency)} {formatMoney(selectedTotal)}
                   </strong>
                 </div>
 
@@ -1231,7 +1257,7 @@ export default function Home() {
                   </span>
 
                   <strong className="text-green-700">
-                    US$ {formatMoney(selectedPaid)}
+                    {currencyLabel(selectedReservation.currency)} {formatMoney(selectedPaid)}
                   </strong>
                 </div>
 
@@ -1241,7 +1267,7 @@ export default function Home() {
                   </span>
 
                   <strong className="text-gray-950">
-                    US$ {formatMoney(selectedRemaining)}
+                    {currencyLabel(selectedReservation.currency)} {formatMoney(selectedRemaining)}
                   </strong>
                 </div>
 
@@ -1263,7 +1289,7 @@ export default function Home() {
                     <div>
 
                       <label className="text-sm font-semibold text-gray-800">
-                        Monto (US$)
+                        Monto ({currencyLabel(selectedReservation.currency)})
                       </label>
 
                       <input
@@ -1369,7 +1395,7 @@ export default function Home() {
                         </span>
 
                         <strong className="text-gray-950">
-                          US$ {formatMoney(payment.amount)}
+                          {currencyLabel(payment.currency)} {formatMoney(payment.amount)}
                         </strong>
                       </div>
 

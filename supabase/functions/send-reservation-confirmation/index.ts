@@ -22,6 +22,7 @@ type ReservationForEmail = {
   check_out: string
   nights: number
   total_price: number
+  currency: 'USD' | 'PEN'
   tenant_full_name: string | null
   tenant_dni: string | null
   tenant_address: string | null
@@ -65,6 +66,10 @@ function formatMoney(value: number) {
   })
 }
 
+function currencyLabel(currency: 'USD' | 'PEN') {
+  return currency === 'PEN' ? 'S/' : 'US$'
+}
+
 function getPropertyName(reservation: ReservationForEmail) {
   if (Array.isArray(reservation.properties)) {
     return reservation.properties[0]?.name ?? 'Propiedad'
@@ -87,7 +92,7 @@ function buildEmailHtml(
     ['Check-in', formatDate(reservation.check_in)],
     ['Check-out', formatDate(reservation.check_out)],
     ['Noches', reservation.nights],
-    ['Monto total', `US$ ${formatMoney(reservation.total_price)}`],
+    ['Monto total', `${currencyLabel(reservation.currency)} ${formatMoney(reservation.total_price)}`],
   ]
 
   const tenantRows = [
@@ -153,7 +158,7 @@ function buildEmailText(
     `Check-in: ${formatDate(reservation.check_in)}`,
     `Check-out: ${formatDate(reservation.check_out)}`,
     `Noches: ${reservation.nights}`,
-    `Monto total: US$ ${formatMoney(reservation.total_price)}`,
+    `Monto total: ${currencyLabel(reservation.currency)} ${formatMoney(reservation.total_price)}`,
     '',
     'DATOS DEL TENANT',
     `Nombre: ${reservation.tenant_full_name}`,
@@ -251,6 +256,7 @@ Deno.serve(async (request) => {
         check_out,
         nights,
         total_price,
+        currency,
         tenant_full_name,
         tenant_dni,
         tenant_address,
