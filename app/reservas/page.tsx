@@ -49,6 +49,22 @@ type GuestList = {
 }
 
 type ReservationPeriod = 'upcoming' | 'history'
+type OwnerFilter = 'all' | 'Paola' | 'Victoria'
+
+const PROPERTY_OWNERS: Record<string, Exclude<OwnerFilter, 'all'>> = {
+  'Casa 4': 'Paola',
+  'Dpto 101': 'Paola',
+  'Dpto 201': 'Paola',
+  'Dpto 301': 'Paola',
+  'Casa 2': 'Victoria',
+  'Casa 3': 'Victoria',
+  'Casa 5': 'Victoria',
+  'Casa 6': 'Victoria',
+  'Dpto 105': 'Victoria',
+  'Dpto 106': 'Victoria',
+  'Dpto 202': 'Victoria',
+  'Dpto 306': 'Victoria',
+}
 
 function getTodayInLima() {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -86,6 +102,7 @@ export default function ReservationsPage() {
 
   const [search, setSearch] = useState('')
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [exportOwner, setExportOwner] = useState<OwnerFilter>('all')
 
   const loadData = useCallback(async () => {
     const {
@@ -459,6 +476,17 @@ export default function ReservationsPage() {
     }
   }, [filteredReservations])
 
+  const exportReservations = useMemo(
+    () =>
+      filteredReservations.filter((reservation) => {
+        if (exportOwner === 'all') return true
+
+        const propertyName = getPropertyName(reservation.property_id)
+        return PROPERTY_OWNERS[propertyName] === exportOwner
+      }),
+    [filteredReservations, exportOwner, getPropertyName]
+  )
+
   const summaryByCurrency = useMemo(() => {
     const initial = {
       USD: { total: 0, paid: 0, remaining: 0 },
@@ -524,7 +552,7 @@ export default function ReservationsPage() {
 
   function downloadExcel() {
     if (
-      filteredReservations.length === 0
+      exportReservations.length === 0
     ) {
       alert(
         'No hay reservas para exportar con los filtros seleccionados.'
@@ -534,7 +562,7 @@ export default function ReservationsPage() {
     }
 
     const rows =
-      filteredReservations.map(
+      exportReservations.map(
         (reservation) => {
           const total =
             Number(
@@ -560,6 +588,11 @@ export default function ReservationsPage() {
               getPropertyName(
                 reservation.property_id
               ),
+
+            Propietaria:
+              PROPERTY_OWNERS[
+                getPropertyName(reservation.property_id)
+              ] ?? '',
 
             'Check-in':
               formatDate(
@@ -634,6 +667,7 @@ export default function ReservationsPage() {
     worksheet['!cols'] = [
       { wch: 16 },
       { wch: 14 },
+      { wch: 14 },
       { wch: 13 },
       { wch: 13 },
       { wch: 10 },
@@ -647,6 +681,7 @@ export default function ReservationsPage() {
       { wch: 18 },
       { wch: 18 },
       { wch: 18 },
+      { wch: 20 },
       { wch: 20 },
     ]
 
@@ -666,7 +701,7 @@ export default function ReservationsPage() {
 
     writeFileXLSX(
       workbook,
-      `Paola_Propiedades_Reservas_${today}.xlsx`,
+      `Paola_Propiedades_Reservas_${exportOwner}_${today}.xlsx`,
       {
         compression: true,
       }
@@ -763,10 +798,25 @@ export default function ReservationsPage() {
           <div className="flex flex-wrap gap-3">
             <LogoutButton />
 
+            <label className="min-w-44 text-sm font-semibold text-gray-700">
+              Propietaria para Excel
+              <select
+                value={exportOwner}
+                onChange={(event) =>
+                  setExportOwner(event.target.value as OwnerFilter)
+                }
+                className="mt-1 min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-gray-950"
+              >
+                <option value="all">Todas</option>
+                <option value="Paola">Solo Paola</option>
+                <option value="Victoria">Solo Victoria</option>
+              </select>
+            </label>
+
             <button
               onClick={downloadExcel}
               disabled={
-                filteredReservations.length ===
+                exportReservations.length ===
                 0
               }
               className="rounded-lg bg-green-700 px-5 py-3 font-bold text-white hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-40"
