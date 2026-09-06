@@ -9,6 +9,11 @@ type Guest = {
   age: string
 }
 
+type Pet = {
+  name: string
+  size: '' | 'Pequeña' | 'Mediana' | 'Grande'
+}
+
 type GuestListData = {
   max_guests: number
   submission_deadline: string
@@ -19,6 +24,7 @@ type GuestListData = {
     age: number
   }>
   vehicle_plates: string[]
+  pets: Array<{ name: string; size: Pet['size'] }>
 }
 
 const emptyGuest = (): Guest => ({
@@ -54,6 +60,8 @@ export function GuestListForm({ token }: { token: string }) {
   const [metadata, setMetadata] = useState<GuestListData | null>(null)
   const [guests, setGuests] = useState<Guest[]>([emptyGuest()])
   const [plates, setPlates] = useState(['', ''])
+  const [hasPets, setHasPets] = useState(false)
+  const [pets, setPets] = useState<Pet[]>([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -92,6 +100,8 @@ export function GuestListForm({ token }: { token: string }) {
       guestList.vehicle_plates[0] ?? '',
       guestList.vehicle_plates[1] ?? '',
     ])
+    setHasPets(guestList.pets.length > 0)
+    setPets(guestList.pets)
     setIsDirty(false)
     setLoading(false)
   }, [token])
@@ -158,6 +168,16 @@ export function GuestListForm({ token }: { token: string }) {
       return
     }
 
+    if (
+      hasPets &&
+      (pets.length < 1 ||
+        pets.length > 2 ||
+        pets.some((pet) => !pet.name.trim() || !pet.size))
+    ) {
+      setErrorMessage('Completa el nombre y tamaño de cada mascota.')
+      return
+    }
+
     setSaving(true)
 
     const { data, error } = await supabase.rpc(
@@ -170,6 +190,9 @@ export function GuestListForm({ token }: { token: string }) {
           age: Number(guest.age),
         })),
         p_vehicle_plates: plates.map((plate) => plate.trim()),
+        p_pets: hasPets
+          ? pets.map((pet) => ({ name: pet.name.trim(), size: pet.size }))
+          : [],
       }
     )
 
@@ -206,7 +229,7 @@ export function GuestListForm({ token }: { token: string }) {
   return (
     <section className="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-5 text-left">
       <h4 className="text-lg font-bold text-gray-950">
-        Lista de huéspedes y vehículos
+        Lista de huéspedes, vehículos y mascotas
       </h4>
 
       <p className="mt-2 text-sm font-medium text-gray-700">
@@ -220,7 +243,7 @@ export function GuestListForm({ token }: { token: string }) {
           ? 'Lista recibida. Puedes actualizarla si es necesario.'
           : isLate
             ? 'La fecha límite venció, pero aún puedes enviarla.'
-            : `Pendiente: máximo ${metadata.max_guests} huéspedes y 2 vehículos.`}
+            : `Pendiente: máximo ${metadata.max_guests} huéspedes, 2 vehículos y 2 mascotas.`}
       </p>
 
       <button
@@ -268,7 +291,6 @@ export function GuestListForm({ token }: { token: string }) {
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <input
                     type="text"
-                    inputMode="numeric"
                     maxLength={200}
                     value={guest.full_name}
                     onChange={(event) =>
@@ -340,6 +362,98 @@ export function GuestListForm({ token }: { token: string }) {
                 className="rounded-lg border border-gray-300 bg-white p-3 text-gray-950"
               />
             ))}
+          </div>
+
+          <div className="mt-6 rounded-xl border border-gray-200 bg-white p-4">
+            <label htmlFor="has-pets" className="font-bold text-gray-950">
+              ¿Llevarán mascotas?
+            </label>
+            <select
+              id="has-pets"
+              value={hasPets ? 'yes' : 'no'}
+              onChange={(event) => {
+                const nextValue = event.target.value === 'yes'
+                setHasPets(nextValue)
+                setPets(nextValue ? (pets.length ? pets : [{ name: '', size: '' }]) : [])
+                setIsDirty(true)
+              }}
+              className="mt-3 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-950"
+            >
+              <option value="no">No</option>
+              <option value="yes">Sí</option>
+            </select>
+
+            {hasPets && (
+              <div className="mt-4 space-y-3">
+                {pets.map((pet, index) => (
+                  <div key={index} className="rounded-lg bg-gray-50 p-3">
+                    <div className="flex items-center justify-between">
+                      <strong className="text-sm text-gray-900">Mascota {index + 1}</strong>
+                      {pets.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPets((current) => current.filter((_, itemIndex) => itemIndex !== index))
+                            setIsDirty(true)
+                          }}
+                          className="text-xs font-bold text-red-700"
+                        >
+                          Quitar
+                        </button>
+                      )}
+                    </div>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <input
+                        type="text"
+                        maxLength={100}
+                        value={pet.name}
+                        onChange={(event) => {
+                          setPets((current) => current.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, name: event.target.value } : item
+                          ))
+                          setIsDirty(true)
+                        }}
+                        placeholder="Nombre"
+                        aria-label={`Nombre de la mascota ${index + 1}`}
+                        className="rounded-lg border border-gray-300 bg-white p-3 text-gray-950"
+                      />
+                      <select
+                        value={pet.size}
+                        onChange={(event) => {
+                          setPets((current) => current.map((item, itemIndex) =>
+                            itemIndex === index
+                              ? { ...item, size: event.target.value as Pet['size'] }
+                              : item
+                          ))
+                          setIsDirty(true)
+                        }}
+                        aria-label={`Tamaño de la mascota ${index + 1}`}
+                        className="rounded-lg border border-gray-300 bg-white p-3 text-gray-950"
+                      >
+                        <option value="">Selecciona tamaño</option>
+                        <option value="Pequeña">Pequeña</option>
+                        <option value="Mediana">Mediana</option>
+                        <option value="Grande">Grande</option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
+
+                {pets.length < 2 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPets((current) => [...current, { name: '', size: '' }])
+                      setIsDirty(true)
+                    }}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-800"
+                  >
+                    + Agregar otra mascota
+                  </button>
+                )}
+                <p className="text-xs text-gray-600">Máximo 2 mascotas.</p>
+              </div>
+            )}
           </div>
 
           {errorMessage && (

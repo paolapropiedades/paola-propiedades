@@ -43,6 +43,7 @@ type GuestList = {
     age: number
   }>
   vehicle_plates: string[]
+  pets: Array<{ name: string; size: string }>
   submitted_at: string
   updated_at: string
 }
@@ -149,6 +150,7 @@ export default function ReservationsPage() {
         reservation_id,
         guests,
         vehicle_plates,
+        pets,
         submitted_at,
         updated_at
       `)
@@ -695,6 +697,12 @@ export default function ReservationsPage() {
             plate,
           ])
         : [['—', 'Sin vehículos registrados']]),
+      [],
+      ['Mascotas'],
+      ['Mascota', 'Nombre', 'Tamaño'],
+      ...(guestList.pets.length > 0
+        ? guestList.pets.map((pet, index) => [index + 1, pet.name, pet.size])
+        : [['—', 'Sin mascotas registradas', '—']]),
     ]
 
     const workbook = utils.book_new()
