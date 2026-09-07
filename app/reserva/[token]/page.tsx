@@ -18,6 +18,65 @@ type Reservation = {
   payment_schedule: Array<{ due_date: string; amount: number }>
 }
 
+const PAOLA_PROPERTIES = new Set([
+  'Casa 4',
+  'Dpto 101',
+  'Dpto 201',
+  'Dpto 301',
+])
+
+const VICTORIA_PROPERTIES = new Set([
+  'Casa 2',
+  'Casa 3',
+  'Casa 5',
+  'Casa 6',
+  'Dpto 105',
+  'Dpto 106',
+  'Dpto 202',
+  'Dpto 306',
+])
+
+const PAYMENT_ACCOUNTS = {
+  Paola: {
+    accountHolder: 'Paola Cornejo',
+    USD: {
+      accountNumber: '19393706874105',
+      interbankNumber: '00219319370687410519',
+    },
+    PEN: {
+      accountNumber: '19394883469085',
+      interbankNumber: '00219319488346908510',
+    },
+  },
+  Victoria: {
+    accountHolder: 'Victoria Yrigoyen',
+    USD: {
+      accountNumber: '19494705364181',
+      interbankNumber: '00219419470536418198',
+    },
+    PEN: {
+      accountNumber: '19494705335052',
+      interbankNumber: '00219419470533505297',
+    },
+  },
+} as const
+
+function getPaymentAccount(reservation: Reservation) {
+  const owner = PAOLA_PROPERTIES.has(reservation.property_name)
+    ? 'Paola'
+    : VICTORIA_PROPERTIES.has(reservation.property_name)
+      ? 'Victoria'
+      : null
+
+  if (!owner) return null
+
+  return {
+    accountHolder: PAYMENT_ACCOUNTS[owner].accountHolder,
+    currencyName: reservation.currency === 'PEN' ? 'Soles' : 'Dólares',
+    ...PAYMENT_ACCOUNTS[owner][reservation.currency],
+  }
+}
+
 export default function ReservationPage({
   params,
 }: {
@@ -54,6 +113,10 @@ export default function ReservationPage({
 
   const [accepted, setAccepted] =
     useState(false)
+
+  const paymentAccount = reservation
+    ? getPaymentAccount(reservation)
+    : null
 
 
   useEffect(() => {
@@ -444,6 +507,42 @@ export default function ReservationPage({
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {paymentAccount && (
+              <div className="mt-6 rounded-xl border border-sky-200 bg-sky-50 p-4 sm:p-5">
+                <h3 className="font-bold text-gray-950">
+                  Información para pagos
+                </h3>
+                <p className="mt-1 text-sm text-gray-700">
+                  Cuenta BCP en {paymentAccount.currencyName}
+                </p>
+
+                <dl className="mt-4 space-y-3 text-sm">
+                  <div>
+                    <dt className="font-medium text-gray-600">Titular</dt>
+                    <dd className="mt-0.5 font-semibold text-gray-950">
+                      {paymentAccount.accountHolder}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-gray-600">
+                      Número de cuenta
+                    </dt>
+                    <dd className="mt-0.5 break-all font-mono font-semibold tracking-wide text-gray-950">
+                      {paymentAccount.accountNumber}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-gray-600">
+                      Cuenta interbancaria (CCI)
+                    </dt>
+                    <dd className="mt-0.5 break-all font-mono font-semibold tracking-wide text-gray-950">
+                      {paymentAccount.interbankNumber}
+                    </dd>
+                  </div>
+                </dl>
               </div>
             )}
 
