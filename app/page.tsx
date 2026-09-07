@@ -506,7 +506,7 @@ export default function Home() {
 
     setRegisteringPayment(true)
 
-    const { error } = await supabase.rpc(
+    const { data: paymentId, error } = await supabase.rpc(
       'register_payment_in_currency',
       {
         p_reservation_id: selectedReservation.id,
@@ -552,6 +552,19 @@ export default function Home() {
     setPaymentMessage(
       '✓ Pago registrado correctamente.'
     )
+
+    try {
+      const { error: emailError } = await supabase.functions.invoke(
+        'send-victoria-payment-notification',
+        { body: { payment_id: Number(paymentId) } }
+      )
+
+      if (emailError) {
+        console.error('No se pudo enviar el aviso de pago:', emailError)
+      }
+    } catch (emailError) {
+      console.error('No se pudo enviar el aviso de pago:', emailError)
+    }
 
     await loadPayments(selectedReservation.id)
     await loadData()
