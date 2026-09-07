@@ -14,6 +14,16 @@ type Property = {
   active: boolean
 }
 
+type PaymentInstallment = {
+  due_date: string
+  amount: number
+}
+
+type PaymentInstallmentInput = {
+  due_date: string
+  amount: string
+}
+
 type Reservation = {
   id: number
   property_id: number
@@ -30,6 +40,7 @@ type Reservation = {
   amount_paid: number
   payment_status: string
   currency: 'USD' | 'PEN'
+  payment_schedule: PaymentInstallment[]
 }
 
 type Payment = {
@@ -55,6 +66,8 @@ export default function Home() {
   const [totalPriceInput, setTotalPriceInput] = useState('')
   const [reservationCurrency, setReservationCurrency] =
     useState<'USD' | 'PEN'>('USD')
+  const [paymentSchedule, setPaymentSchedule] =
+    useState<PaymentInstallmentInput[]>([])
 
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -110,7 +123,8 @@ export default function Home() {
           total_price,
           amount_paid,
           payment_status,
-          currency
+          currency,
+          payment_schedule
         `)
         .neq('reservation_status', 'cancelled')
 
@@ -175,6 +189,10 @@ export default function Home() {
       : 0
 
   const totalPrice = Number(totalPriceInput) || 0
+  const scheduledTotal = paymentSchedule.reduce(
+    (sum, installment) => sum + (Number(installment.amount) || 0),
+    0
+  )
 
   function previousMonth() {
     setCurrentDate(new Date(year, month - 1, 1))
@@ -342,6 +360,26 @@ export default function Home() {
       return
     }
 
+    if (
+      paymentSchedule.some(
+        (installment) =>
+          !installment.due_date || Number(installment.amount) <= 0
+      )
+    ) {
+      setMessage('Completa la fecha y un monto válido para cada cuota.')
+      return
+    }
+
+    if (
+      paymentSchedule.length > 0 &&
+      Math.round(scheduledTotal * 100) !== Math.round(totalPrice * 100)
+    ) {
+      setMessage(
+        `Las cuotas deben sumar exactamente ${currencyLabel(reservationCurrency)} ${formatMoney(totalPrice)}.`
+      )
+      return
+    }
+
     setSaving(true)
 
     const reservationNumber =
@@ -364,6 +402,10 @@ export default function Home() {
         // Este es el monto final ingresado por el admin.
         total_price: totalPrice,
         currency: reservationCurrency,
+        payment_schedule: paymentSchedule.map((installment) => ({
+          due_date: installment.due_date,
+          amount: Number(installment.amount),
+        })),
 
         amount_paid: 0,
         reservation_status: 'pending',
@@ -421,6 +463,7 @@ export default function Home() {
     setCheckOut('')
     setTotalPriceInput('')
     setReservationCurrency('USD')
+    setPaymentSchedule([])
     setMessage('')
     setCreatedReservationLink('')
   }
@@ -968,6 +1011,88 @@ export default function Home() {
 
                 </div>
 
+                {/* CRONOGRAMA DE PAGOS */}
+
+                <div className="mt-6 rounded-xl border border-gray-300 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-bold text-gray-950">Cronograma de pagos</h3>
+                      <p className="mt-1 text-xs text-gray-600">Opcional. Las cuotas deben sumar el total.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPaymentSchedule((current) => [
+                          ...current,
+                          { due_date: '', amount: '' },
+                        ])
+                      }
+                      className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-sm font-bold text-gray-800"
+                    >
+                      + Cuota
+                    </button>
+                  </div>
+
+                  {paymentSchedule.length === 0 ? (
+                    <p className="mt-4 text-sm text-gray-600">Sin cronograma definido.</p>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      {paymentSchedule.map((installment, index) => (
+                        <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+                          <input
+                            type="date"
+                            value={installment.due_date}
+                            onChange={(event) =>
+                              setPaymentSchedule((current) =>
+                                current.map((item, itemIndex) =>
+                                  itemIndex === index
+                                    ? { ...item, due_date: event.target.value }
+                                    : item
+                                )
+                              )
+                            }
+                            aria-label={`Fecha esperada de la cuota ${index + 1}`}
+                            className="min-w-0 rounded-lg border border-gray-300 p-2 text-gray-950"
+                          />
+                          <input
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            value={installment.amount}
+                            onChange={(event) =>
+                              setPaymentSchedule((current) =>
+                                current.map((item, itemIndex) =>
+                                  itemIndex === index
+                                    ? { ...item, amount: event.target.value }
+                                    : item
+                                )
+                              )
+                            }
+                            placeholder={currencyLabel(reservationCurrency)}
+                            aria-label={`Monto de la cuota ${index + 1}`}
+                            className="min-w-0 rounded-lg border border-gray-300 p-2 text-gray-950"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPaymentSchedule((current) =>
+                                current.filter((_, itemIndex) => itemIndex !== index)
+                              )
+                            }
+                            aria-label={`Quitar cuota ${index + 1}`}
+                            className="rounded-lg px-3 text-lg font-bold text-red-700"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                      <p className="text-right text-sm font-bold text-gray-800">
+                        Programado: {currencyLabel(reservationCurrency)} {formatMoney(scheduledTotal)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
 
                 {/* RESUMEN */}
 
@@ -1210,6 +1335,29 @@ export default function Home() {
 
               </div>
 
+            )}
+
+            {selectedReservation.payment_schedule.length > 0 && (
+              <section className="mt-7 border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-bold text-gray-950">
+                  Cronograma acordado
+                </h3>
+                <div className="mt-3 overflow-hidden rounded-xl border border-gray-200">
+                  {selectedReservation.payment_schedule.map((installment, index) => (
+                    <div
+                      key={`${installment.due_date}-${index}`}
+                      className="flex items-center justify-between border-b border-gray-200 p-3 last:border-b-0"
+                    >
+                      <span className="text-sm font-medium text-gray-700">
+                        Cuota {index + 1} · {formatDate(installment.due_date)}
+                      </span>
+                      <strong className="text-gray-950">
+                        {currencyLabel(selectedReservation.currency)} {formatMoney(installment.amount)}
+                      </strong>
+                    </div>
+                  ))}
+                </div>
+              </section>
             )}
 
 

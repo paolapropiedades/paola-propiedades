@@ -15,6 +15,7 @@ type Reservation = {
   reservation_status: string
   property_name: string
   currency: 'USD' | 'PEN'
+  payment_schedule: Array<{ due_date: string; amount: number }>
 }
 
 export default function ReservationPage({
@@ -420,6 +421,31 @@ export default function ReservationPage({
               </div>
 
             </div>
+
+            {reservation.payment_schedule.length > 0 && (
+              <div className="mt-6">
+                <h3 className="font-bold text-gray-950">Cronograma de pagos</h3>
+                <div className="mt-3 overflow-hidden rounded-xl border border-gray-200">
+                  {reservation.payment_schedule.map((installment, index) => (
+                    <div
+                      key={`${installment.due_date}-${index}`}
+                      className="flex items-center justify-between border-b border-gray-200 p-3 last:border-b-0"
+                    >
+                      <span className="text-sm font-medium text-gray-700">
+                        Cuota {index + 1} · {formatDate(installment.due_date)}
+                      </span>
+                      <strong className="text-gray-950">
+                        {reservation.currency === 'PEN' ? 'S/' : 'US$'}{' '}
+                        {Number(installment.amount).toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
           </div>
 
