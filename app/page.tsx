@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { BrandLogo } from '@/app/components/brand-logo'
 import { LogoutButton } from '@/app/components/logout-button'
 import { AdminMobileNav } from '@/app/components/admin-mobile-nav'
+import { ReservationGuarantee } from '@/app/components/reservation-guarantee'
 
 type Property = {
   id: number
@@ -1375,6 +1376,12 @@ export default function Home() {
 
 
             {/* PAGOS */}
+
+            <ReservationGuarantee
+              key={selectedReservation.id}
+              reservationId={selectedReservation.id}
+              currency={selectedReservation.currency}
+            />
 
             <div className="mt-7 border-t border-gray-200 pt-6">
 

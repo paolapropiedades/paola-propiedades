@@ -56,8 +56,9 @@ export async function updateSession(request: NextRequest) {
   const isLoginPage = pathname === '/login'
   const isPublicReservation = pathname.startsWith('/reserva/')
   const isTermsPage = pathname === '/terminos-y-condiciones'
+  const isHouseRules = pathname === '/documentos/normas-de-convivencia.pdf'
   const isPublicRoute =
-    isLoginPage || isPublicReservation || isTermsPage
+    isLoginPage || isPublicReservation || isTermsPage || isHouseRules
 
   if (!isAuthenticated && !isPublicRoute) {
     return redirectWithCookies(request, supabaseResponse, '/login')

@@ -16,6 +16,8 @@ type Reservation = {
   property_name: string
   currency: 'USD' | 'PEN'
   payment_schedule: Array<{ due_date: string; amount: number }>
+  guarantee_amount?: number
+  guarantee_received_on?: string | null
 }
 
 const PAOLA_PROPERTIES = new Set([
@@ -509,6 +511,43 @@ export default function ReservationPage({
                 </div>
               </div>
             )}
+
+            {Number(reservation.guarantee_amount) > 0 && (
+              <section className="mt-6 rounded-xl border border-gray-200 p-4">
+                <h3 className="font-bold text-gray-950">Depósito de garantía</h3>
+                <p className="mt-2 font-semibold text-gray-950">
+                  {reservation.currency === 'PEN' ? 'S/' : 'US$'}{' '}
+                  {Number(reservation.guarantee_amount).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </p>
+                <p className="mt-1 text-sm text-gray-700">
+                  Se entrega por separado del pago del alquiler.
+                </p>
+                <p className="mt-2 text-sm font-semibold text-gray-700">
+                  {reservation.guarantee_received_on
+                    ? `Recibida el ${formatDate(reservation.guarantee_received_on)}`
+                    : 'Pendiente de entrega'}
+                </p>
+              </section>
+            )}
+
+            <section className="mt-6 rounded-xl border border-gray-200 p-4">
+              <h3 className="font-bold text-gray-950">Normas de convivencia</h3>
+              <p className="mt-1 text-sm text-gray-700">
+                Revisa las normas del condominio antes de tu estadía.
+              </p>
+              <a
+                href="/documentos/normas-de-convivencia.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-block rounded-lg bg-gray-950 px-4 py-3 text-sm font-bold text-white hover:bg-gray-800"
+              >
+                Ver normas de convivencia (PDF)
+                <span className="sr-only"> · Se abre en una nueva pestaña</span>
+              </a>
+            </section>
 
             {paymentAccount && (
               <div className="mt-6 rounded-xl border border-sky-200 bg-sky-50 p-4 sm:p-5">
