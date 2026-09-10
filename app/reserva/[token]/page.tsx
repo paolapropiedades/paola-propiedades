@@ -371,7 +371,7 @@ export default function ReservationPage({
           />
 
           <p className="mt-2 font-medium text-gray-700">
-            Confirma tu reserva
+            {success ? 'Tu reserva' : 'Confirma tu reserva'}
           </p>
 
         </div>
@@ -381,6 +381,27 @@ export default function ReservationPage({
 
         <div className="mt-8 rounded-2xl border border-gray-300 bg-white p-6 shadow-sm">
 
+
+          {success && (
+            <section role="status" className="mb-6 border-b border-gray-200 pb-6 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-2xl text-green-800">
+                ✓
+              </div>
+
+              <h3 className="mt-5 text-2xl font-bold text-gray-950">
+                Reserva confirmada
+              </h3>
+
+              <p className="mt-2 font-medium text-gray-700">
+                Tus datos fueron registrados correctamente.
+              </p>
+
+              <div className="mt-6 rounded-xl border border-green-200 bg-green-50 p-4 font-semibold text-green-900">
+                ¡Gracias!
+              </div>
+
+            </section>
+          )}
 
           {/* RESUMEN */}
 
@@ -533,21 +554,7 @@ export default function ReservationPage({
               </section>
             )}
 
-            <section className="mt-6 rounded-xl border border-gray-200 p-4">
-              <h3 className="font-bold text-gray-950">Normas de convivencia</h3>
-              <p className="mt-1 text-sm text-gray-700">
-                Revisa las normas del condominio antes de tu estadía.
-              </p>
-              <a
-                href="/documentos/normas-de-convivencia.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-block rounded-lg bg-gray-950 px-4 py-3 text-sm font-bold text-white hover:bg-gray-800"
-              >
-                Ver normas de convivencia (PDF)
-                <span className="sr-only"> · Se abre en una nueva pestaña</span>
-              </a>
-            </section>
+
 
             {paymentAccount && (
               <div className="mt-6 rounded-xl border border-sky-200 bg-sky-50 p-4 sm:p-5">
@@ -593,22 +600,6 @@ export default function ReservationPage({
           {success ? (
 
             <div className="py-8 text-center">
-
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-2xl text-green-800">
-                ✓
-              </div>
-
-              <h3 className="mt-5 text-2xl font-bold text-gray-950">
-                Reserva confirmada
-              </h3>
-
-              <p className="mt-2 font-medium text-gray-700">
-                Tus datos fueron registrados correctamente.
-              </p>
-
-              <div className="mt-6 rounded-xl border border-green-200 bg-green-50 p-4 font-semibold text-green-900">
-                ¡Gracias!
-              </div>
 
               <GuestListForm token={token} />
 
@@ -824,6 +815,22 @@ export default function ReservationPage({
             </div>
 
           )}
+
+            <section className="mt-6 rounded-xl border border-gray-200 p-4">
+              <h3 className="font-bold text-gray-950">Normas de convivencia</h3>
+              <p className="mt-1 text-sm text-gray-700">
+                Revisa las normas del condominio antes de tu estadía.
+              </p>
+              <a
+                href="/documentos/normas-de-convivencia.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-block rounded-lg bg-gray-950 px-4 py-3 text-sm font-bold text-white hover:bg-gray-800"
+              >
+                Ver normas de convivencia (PDF)
+                <span className="sr-only"> · Se abre en una nueva pestaña</span>
+              </a>
+            </section>
 
         </div>
 
