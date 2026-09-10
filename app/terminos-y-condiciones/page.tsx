@@ -12,7 +12,7 @@ const sections = [
   {
     title: '1. Objeto',
     paragraphs: [
-      'Los presentes Términos y Condiciones regulan el arrendamiento temporal del inmueble identificado en la reserva realizada con Paola Cornejo – Propiedades en la playa, en adelante, “EL ARRENDADOR”.',
+      'Los presentes Términos y Condiciones regulan el arrendamiento temporal del inmueble ubicado en el Condominio Arena y Campo, identificado en la reserva realizada con Paola Cornejo – Propiedades en la playa, en adelante, “EL ARRENDADOR”.',
       'La persona que confirma la reserva será denominada “EL ARRENDATARIO”.',
       'Al confirmar electrónicamente la reserva, EL ARRENDATARIO declara haber leído, comprendido y aceptado estos Términos y Condiciones.',
     ],
@@ -21,6 +21,7 @@ const sections = [
     title: '2. Reserva y período de arrendamiento',
     paragraphs: [
       'El inmueble, fechas de ingreso y salida, precio total y demás condiciones particulares serán las indicadas en la confirmación de cada reserva.',
+      'El INMUEBLE se alquila incluyendo el derecho de uso de dos estacionamientos para dos automóviles en la parte trasera de EL INMUEBLE. Asimismo, se otorga la facultad a EL ARRENDATARIO de hacer uso de todas las áreas comunes.',
       'EL ARRENDATARIO se obliga a desocupar y entregar el inmueble en la fecha y hora acordadas.',
     ],
   },
@@ -51,7 +52,7 @@ const sections = [
     title: '6. Servicios',
     paragraphs: [
       'Salvo que se indique algo diferente en las condiciones particulares de la reserva, el arrendamiento comprende los servicios y conceptos expresamente indicados por EL ARRENDADOR.',
-      'Los servicios adicionales solicitados por EL ARRENDATARIO podrán generar cargos adicionales.',
+      'El costo de los servicios adicionales como la cuota de mantenimiento, agua potable, luz eléctrica y el concepto de limpieza de piscina se coordinarán directamente con EL ARRENDADOR y podrán generar cargos adicionales.',
     ],
   },
   {
@@ -80,7 +81,7 @@ const sections = [
     title: '10. Retraso en la devolución',
     paragraphs: [
       'EL ARRENDATARIO deberá entregar el inmueble puntualmente al finalizar el período reservado.',
-      'De acuerdo con las condiciones utilizadas por EL ARRENDADOR, el retraso en la devolución podrá generar una penalidad de US$300.00 por cada día de retraso, hasta la efectiva devolución del inmueble.',
+      'De acuerdo con las condiciones utilizadas por EL ARRENDADOR, el retraso en la devolución podrá generar una penalidad de hasta US$300.00 por cada día de retraso, hasta la efectiva devolución del inmueble.',
     ],
   },
   {
