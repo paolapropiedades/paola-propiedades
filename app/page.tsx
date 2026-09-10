@@ -65,6 +65,7 @@ export default function Home() {
   const [checkIn, setCheckIn] = useState('')
   const [checkOut, setCheckOut] = useState('')
   const [totalPriceInput, setTotalPriceInput] = useState('')
+  const [guaranteeAmountInput, setGuaranteeAmountInput] = useState('')
   const [reservationCurrency, setReservationCurrency] =
     useState<'USD' | 'PEN'>('USD')
   const [paymentSchedule, setPaymentSchedule] =
@@ -361,6 +362,17 @@ export default function Home() {
       return
     }
 
+    const guaranteeAmount = Number(guaranteeAmountInput || '0')
+    if (
+      (guaranteeAmountInput !== '' && !/^\d+(\.\d{1,2})?$/.test(guaranteeAmountInput)) ||
+      !Number.isFinite(guaranteeAmount) ||
+      guaranteeAmount < 0 ||
+      guaranteeAmount > 9999999999.99
+    ) {
+      setMessage('Ingresa una garantía válida, mayor o igual a cero y con un máximo de dos decimales.')
+      return
+    }
+
     if (
       paymentSchedule.some(
         (installment) =>
@@ -402,6 +414,7 @@ export default function Home() {
 
         // Este es el monto final ingresado por el admin.
         total_price: totalPrice,
+        guarantee_amount: guaranteeAmount,
         currency: reservationCurrency,
         payment_schedule: paymentSchedule.map((installment) => ({
           due_date: installment.due_date,
@@ -463,6 +476,7 @@ export default function Home() {
     setCheckIn('')
     setCheckOut('')
     setTotalPriceInput('')
+    setGuaranteeAmountInput('')
     setReservationCurrency('USD')
     setPaymentSchedule([])
     setMessage('')
@@ -1027,6 +1041,27 @@ export default function Home() {
 
                 {/* CRONOGRAMA DE PAGOS */}
 
+                <div className="mt-5">
+                  <label htmlFor="new-reservation-guarantee" className="text-sm font-semibold text-gray-900">
+                    Depósito de garantía ({currencyLabel(reservationCurrency)})
+                  </label>
+                  <input
+                    id="new-reservation-guarantee"
+                    type="number"
+                    min="0"
+                    max="9999999999.99"
+                    step="0.01"
+                    value={guaranteeAmountInput}
+                    onChange={(event) => setGuaranteeAmountInput(event.target.value)}
+                    placeholder="0.00"
+                    aria-describedby="new-reservation-guarantee-help"
+                    className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-950 placeholder:text-gray-500"
+                  />
+                  <p id="new-reservation-guarantee-help" className="mt-2 text-xs font-medium text-gray-500">
+                    Opcional. Se muestra al inquilino y se entrega por separado del alquiler y sus cuotas.
+                  </p>
+                </div>
+
                 <div className="mt-6 rounded-xl border border-gray-300 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -1145,6 +1180,15 @@ export default function Home() {
                       {currencyLabel(reservationCurrency)} {formatMoney(totalPrice)}
                     </strong>
                   </div>
+
+                  {Number(guaranteeAmountInput) > 0 && (
+                    <div className="mt-3 flex justify-between">
+                      <span className="font-medium text-gray-700">Garantía por separado</span>
+                      <strong className="text-gray-950">
+                        {currencyLabel(reservationCurrency)} {formatMoney(Number(guaranteeAmountInput))}
+                      </strong>
+                    </div>
+                  )}
 
                 </div>
 
