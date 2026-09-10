@@ -116,6 +116,22 @@ export default function ReservationPage({
   const [accepted, setAccepted] =
     useState(false)
 
+  const [copyMessage, setCopyMessage] = useState('')
+  const [copyingAccount, setCopyingAccount] = useState(false)
+
+  async function copyPaymentAccount(value: string, label: string) {
+    setCopyMessage('')
+    setCopyingAccount(true)
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopyMessage(`✓ ${label} copiado al portapapeles.`)
+    } catch {
+      setCopyMessage('No se pudo copiar. Mantén presionado o selecciona el número para copiarlo manualmente.')
+    } finally {
+      setCopyingAccount(false)
+    }
+  }
+
   const paymentAccount = reservation
     ? getPaymentAccount(reservation)
     : null
@@ -576,19 +592,42 @@ export default function ReservationPage({
                     <dt className="font-medium text-gray-600">
                       Número de cuenta
                     </dt>
-                    <dd className="mt-0.5 break-all font-mono font-semibold tracking-wide text-gray-950">
-                      {paymentAccount.accountNumber}
+                    <dd className="mt-1 flex flex-wrap items-center gap-2">
+                      <span className="select-all break-all font-mono font-semibold tracking-wide text-gray-950">
+                        {paymentAccount.accountNumber}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={copyingAccount}
+                        onClick={() => copyPaymentAccount(paymentAccount.accountNumber, 'Número de cuenta')}
+                        className="min-h-11 shrink-0 rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm font-bold text-gray-900 hover:bg-sky-100 disabled:opacity-50"
+                      >
+                        Copiar cuenta
+                      </button>
                     </dd>
                   </div>
                   <div>
                     <dt className="font-medium text-gray-600">
                       Cuenta interbancaria (CCI)
                     </dt>
-                    <dd className="mt-0.5 break-all font-mono font-semibold tracking-wide text-gray-950">
-                      {paymentAccount.interbankNumber}
+                    <dd className="mt-1 flex flex-wrap items-center gap-2">
+                      <span className="select-all break-all font-mono font-semibold tracking-wide text-gray-950">
+                        {paymentAccount.interbankNumber}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={copyingAccount}
+                        onClick={() => copyPaymentAccount(paymentAccount.interbankNumber, 'CCI')}
+                        className="min-h-11 shrink-0 rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm font-bold text-gray-900 hover:bg-sky-100 disabled:opacity-50"
+                      >
+                        Copiar CCI
+                      </button>
                     </dd>
                   </div>
                 </dl>
+                <p role="status" className="mt-3 text-sm font-semibold text-gray-800">
+                  {copyMessage}
+                </p>
               </div>
             )}
 
