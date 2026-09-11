@@ -370,285 +370,52 @@ export default function ReservationPage({
   }
 
 
+  const money = (amount: number) => `${reservation.currency === 'PEN' ? 'S/' : 'US$'} ${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
   return (
-
-    <main className="min-h-screen bg-gray-100 px-4 py-10">
-
-      <div className="mx-auto max-w-xl">
-
-
-        {/* HEADER */}
-
-        <div className="text-center">
-
-          <BrandLogo
-            className="mx-auto h-auto w-80 max-w-full"
-            priority
-          />
-
-          <p className="mt-2 font-medium text-gray-700">
-            {success ? 'Tu reserva' : 'Confirma tu reserva'}
-          </p>
-
-        </div>
-
-
-        {/* TARJETA */}
-
-        <div className="mt-8 rounded-2xl border border-gray-300 bg-white p-6 shadow-sm">
-
-
-          {success && (
-            <section role="status" className="mb-6 border-b border-gray-200 pb-6 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-2xl text-green-800">
-                ✓
-              </div>
-
-              <h3 className="mt-5 text-2xl font-bold text-gray-950">
-                Reserva confirmada
-              </h3>
-
-              <p className="mt-2 font-medium text-gray-700">
-                Tus datos fueron registrados correctamente.
-              </p>
-
-              <div className="mt-6 rounded-xl border border-green-200 bg-green-50 p-4 font-semibold text-green-900">
-                ¡Gracias!
-              </div>
-
-            </section>
-          )}
-
-          {/* RESUMEN */}
-
-          <div className="border-b border-gray-200 pb-6">
-
-            <p className="text-sm font-medium text-gray-600">
-              Propiedad
+    <main className="min-h-screen bg-[#f3f8fa] px-3 py-5 text-slate-900 sm:px-6 sm:py-8 lg:py-12">
+      <article className="mx-auto max-w-5xl rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70">
+        <header className="border-b border-slate-100 px-5 py-5 sm:px-8">
+          <BrandLogo className="mx-auto h-auto w-64 max-w-full sm:mx-0 sm:w-72" priority />
+        </header>
+        <div className="px-5 py-7 sm:p-8 lg:p-10">
+          <section className="border-b border-slate-200 pb-7 text-center" aria-labelledby="reservation-title">
+            {success && <div aria-hidden="true" className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-2xl text-green-700">✓</div>}
+            <h1 id="reservation-title" className="text-2xl font-bold tracking-tight text-[#16364b] sm:text-3xl">
+              {success ? '¡Tu reserva está confirmada!' : 'Confirma tu reserva'}
+            </h1>
+            <p className="mt-2 break-words text-lg font-semibold text-[#16364b]">
+              {success ? 'Te esperamos en ' : ''}{reservation.property_name ?? 'Propiedad'}
             </p>
+            <dl className="mx-auto mt-6 grid max-w-2xl gap-4 text-sm sm:grid-cols-[1fr_1fr_auto] sm:gap-6">
+              <div><dt className="text-slate-500">Ingreso</dt><dd className="mt-1 font-semibold">{formatDate(reservation.check_in)}</dd></div>
+              <div><dt className="text-slate-500">Salida</dt><dd className="mt-1 font-semibold">{formatDate(reservation.check_out)}</dd></div>
+              <div><dt className="text-slate-500">Estadía</dt><dd className="mt-1 font-semibold">{reservation.nights} noches</dd></div>
+            </dl>
+          </section>
 
-            <h2 className="mt-1 text-2xl font-bold text-gray-950">
-
-              {reservation.property_name ??
-                'Propiedad'}
-
-            </h2>
-
-
-            <div className="mt-6 grid grid-cols-2 gap-4">
-
-
-              {/* CHECK IN */}
-
-              <div>
-
-                <p className="text-xs font-bold uppercase tracking-wide text-gray-600">
-                  Check-in
-                </p>
-
-                <p className="mt-1 font-semibold text-gray-950">
-
-                  {formatDate(
-                    reservation.check_in
-                  )}
-
-                </p>
-
-              </div>
-
-
-              {/* CHECK OUT */}
-
-              <div>
-
-                <p className="text-xs font-bold uppercase tracking-wide text-gray-600">
-                  Check-out
-                </p>
-
-                <p className="mt-1 font-semibold text-gray-950">
-
-                  {formatDate(
-                    reservation.check_out
-                  )}
-
-                </p>
-
-              </div>
-
-            </div>
-
-
-            {/* TOTAL */}
-
-            <div className="mt-6 rounded-xl bg-gray-100 p-4">
-
-              <div className="flex justify-between">
-
-                <span className="font-medium text-gray-700">
-                  Noches
-                </span>
-
-                <strong className="text-gray-950">
-                  {reservation.nights}
-                </strong>
-
-              </div>
-
-
-              <div className="mt-2 flex justify-between">
-
-                <span className="font-medium text-gray-700">
-                  Total
-                </span>
-
-                <strong className="text-lg text-gray-950">
-
-                  {reservation.currency === 'PEN' ? 'S/' : 'US$'}{' '}
-
-                  {Number(
-                    reservation.total_price
-                  ).toLocaleString(
-                    'en-US',
-                    {
-                      minimumFractionDigits:
-                        2,
-
-                      maximumFractionDigits:
-                        2,
-                    }
-                  )}
-
-                </strong>
-
-              </div>
-
-            </div>
-
-            {reservation.payment_schedule.length > 0 && (
-              <div className="mt-6">
-                <h3 className="font-bold text-gray-950">Cronograma de pagos</h3>
-                <div className="mt-3 overflow-hidden rounded-xl border border-gray-200">
-                  {reservation.payment_schedule.map((installment, index) => (
-                    <div
-                      key={`${installment.due_date}-${index}`}
-                      className="flex items-center justify-between border-b border-gray-200 p-3 last:border-b-0"
-                    >
-                      <span className="text-sm font-medium text-gray-700">
-                        Cuota {index + 1} · {formatDate(installment.due_date)}
-                      </span>
-                      <strong className="text-gray-950">
-                        {reservation.currency === 'PEN' ? 'S/' : 'US$'}{' '}
-                        {Number(installment.amount).toLocaleString('en-US', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {Number(reservation.guarantee_amount) > 0 && (
-              <section className="mt-6 rounded-xl border border-gray-200 p-4">
-                <h3 className="font-bold text-gray-950">Depósito de garantía</h3>
-                <p className="mt-2 font-semibold text-gray-950">
-                  {reservation.currency === 'PEN' ? 'S/' : 'US$'}{' '}
-                  {Number(reservation.guarantee_amount).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </p>
-                <p className="mt-1 text-sm text-gray-700">
-                  Se entrega por separado del pago del alquiler.
-                </p>
-                <p className="mt-2 text-sm font-semibold text-gray-700">
-                  {reservation.guarantee_received_on
-                    ? `Recibida el ${formatDate(reservation.guarantee_received_on)}`
-                    : 'Pendiente de entrega'}
-                </p>
-              </section>
-            )}
-
-
-
-            {paymentAccount && (
-              <div className="mt-6 rounded-xl border border-sky-200 bg-sky-50 p-4 sm:p-5">
-                <h3 className="font-bold text-gray-950">
-                  Información para pagos
-                </h3>
-                <p className="mt-1 text-sm text-gray-700">
-                  Cuenta BCP en {paymentAccount.currencyName}
-                </p>
-
-                <dl className="mt-4 space-y-3 text-sm">
-                  <div>
-                    <dt className="font-medium text-gray-600">Titular</dt>
-                    <dd className="mt-0.5 font-semibold text-gray-950">
-                      {paymentAccount.accountHolder}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="font-medium text-gray-600">
-                      Número de cuenta
-                    </dt>
-                    <dd className="mt-1 flex flex-wrap items-center gap-2">
-                      <span className="select-all break-all font-mono font-semibold tracking-wide text-gray-950">
-                        {paymentAccount.accountNumber}
-                      </span>
-                      <button
-                        type="button"
-                        disabled={copyingAccount}
-                        onClick={() => copyPaymentAccount(paymentAccount.accountNumber, 'Número de cuenta')}
-                        className="min-h-11 shrink-0 rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm font-bold text-gray-900 hover:bg-sky-100 disabled:opacity-50"
-                      >
-                        Copiar cuenta
-                      </button>
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="font-medium text-gray-600">
-                      Cuenta interbancaria (CCI)
-                    </dt>
-                    <dd className="mt-1 flex flex-wrap items-center gap-2">
-                      <span className="select-all break-all font-mono font-semibold tracking-wide text-gray-950">
-                        {paymentAccount.interbankNumber}
-                      </span>
-                      <button
-                        type="button"
-                        disabled={copyingAccount}
-                        onClick={() => copyPaymentAccount(paymentAccount.interbankNumber, 'CCI')}
-                        className="min-h-11 shrink-0 rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm font-bold text-gray-900 hover:bg-sky-100 disabled:opacity-50"
-                      >
-                        Copiar CCI
-                      </button>
-                    </dd>
-                  </div>
+          <div className="mt-7 grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-10">
+            <div className="min-w-0 space-y-7">
+              {success && <GuestListForm token={token} />}
+              <section aria-labelledby="summary-title">
+                <h2 id="summary-title" className="text-lg font-bold text-[#16364b]">Resumen de tu reserva</h2>
+                <dl className="mt-3 divide-y divide-slate-100">
+                  <div className="flex flex-wrap justify-between gap-2 py-3"><dt>Alquiler</dt><dd className="font-bold tabular-nums">{money(reservation.total_price)}</dd></div>
+                  {Number(reservation.guarantee_amount) > 0 && <div className="flex flex-wrap justify-between gap-2 py-3"><dt>Depósito de garantía</dt><dd className="font-bold tabular-nums">{money(Number(reservation.guarantee_amount))}</dd></div>}
                 </dl>
-                <p role="status" className="mt-3 text-sm font-semibold text-gray-800">
-                  {copyMessage}
-                </p>
-              </div>
-            )}
-
-          </div>
-
-
-          {/* SI YA ESTÁ CONFIRMADA */}
-
-          {success ? (
-
-            <div className="py-8 text-center">
-
-              <GuestListForm token={token} />
-
-            </div>
-
-          ) : (
-
-            /* FORMULARIO */
-
-            <div className="pt-6">
+                {Number(reservation.guarantee_amount) > 0 && <div className="mt-2 text-sm leading-6 text-slate-600"><p>La garantía se entrega por separado del alquiler.</p><p>{reservation.guarantee_received_on ? `Recibida el ${formatDate(reservation.guarantee_received_on)}` : 'Garantía pendiente de entrega'}</p></div>}
+              </section>
+              {reservation.payment_schedule.length > 0 && <section>
+                <h2 className="text-lg font-bold text-[#16364b]">Cronograma de pagos</h2>
+                <div className="mt-3 divide-y divide-slate-100">
+                  {reservation.payment_schedule.map((installment, index) => <div key={`${installment.due_date}-${index}`} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+                    <span className="text-slate-600">Cuota {index + 1} · {formatDate(installment.due_date)}</span>
+                    <strong className="tabular-nums">{money(installment.amount)}</strong>
+                  </div>)}
+                </div>
+              </section>}
+              {!success && (
+            <div className="border-t border-slate-200 pt-6">
 
               <h3 className="text-xl font-bold text-gray-950">
                 Datos del huésped
@@ -663,11 +430,13 @@ export default function ReservationPage({
 
               <div className="mt-6">
 
-                <label className="text-sm font-semibold text-gray-900">
+                <label htmlFor="tenant-fullName" className="text-sm font-semibold text-gray-900">
                   Nombre completo
                 </label>
 
                 <input
+                  id="tenant-fullName"
+                  autoComplete="name"
                   type="text"
                   maxLength={200}
                   value={fullName}
@@ -687,11 +456,13 @@ export default function ReservationPage({
 
               <div className="mt-5">
 
-                <label className="text-sm font-semibold text-gray-900">
+                <label htmlFor="tenant-dni" className="text-sm font-semibold text-gray-900">
                   DNI / Documento
                 </label>
 
                 <input
+                  id="tenant-dni"
+                  autoComplete="off"
                   type="text"
                   maxLength={50}
                   value={dni}
@@ -711,11 +482,13 @@ export default function ReservationPage({
 
               <div className="mt-5">
 
-                <label className="text-sm font-semibold text-gray-900">
+                <label htmlFor="tenant-address" className="text-sm font-semibold text-gray-900">
                   Dirección
                 </label>
 
                 <input
+                  id="tenant-address"
+                  autoComplete="street-address"
                   type="text"
                   maxLength={500}
                   value={address}
@@ -735,11 +508,13 @@ export default function ReservationPage({
 
               <div className="mt-5">
 
-                <label className="text-sm font-semibold text-gray-900">
+                <label htmlFor="tenant-phone" className="text-sm font-semibold text-gray-900">
                   Celular
                 </label>
 
                 <input
+                  id="tenant-phone"
+                  autoComplete="tel"
                   type="tel"
                   maxLength={50}
                   value={phone}
@@ -759,11 +534,13 @@ export default function ReservationPage({
 
               <div className="mt-5">
 
-                <label className="text-sm font-semibold text-gray-900">
+                <label htmlFor="tenant-email" className="text-sm font-semibold text-gray-900">
                   Correo electrónico
                 </label>
 
                 <input
+                  id="tenant-email"
+                  autoComplete="email"
                   type="email"
                   maxLength={320}
                   value={email}
@@ -842,7 +619,7 @@ export default function ReservationPage({
                   confirmReservation
                 }
                 disabled={saving}
-                className="mt-6 w-full rounded-lg bg-gray-950 px-5 py-4 font-bold text-white hover:bg-gray-800 disabled:opacity-50"
+                className="mt-6 w-full rounded-lg bg-[#237e9e] px-5 py-4 font-bold text-white hover:bg-[#19627c] disabled:opacity-50"
               >
 
                 {saving
@@ -853,29 +630,30 @@ export default function ReservationPage({
 
             </div>
 
-          )}
-
-            <section className="mt-6 rounded-xl border border-gray-200 p-4">
-              <h3 className="font-bold text-gray-950">Normas de convivencia</h3>
-              <p className="mt-1 text-sm text-gray-700">
-                Revisa las normas del condominio antes de tu estadía.
-              </p>
-              <a
-                href="/documentos/normas-de-convivencia.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-block rounded-lg bg-gray-950 px-4 py-3 text-sm font-bold text-white hover:bg-gray-800"
-              >
-                Ver normas de convivencia (PDF)
-                <span className="sr-only"> · Se abre en una nueva pestaña</span>
-              </a>
-            </section>
-
+              )}
+            </div>
+            {paymentAccount && <aside className="min-w-0 border-t border-slate-200 pt-7 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8" aria-labelledby="payments-title">
+              <h2 id="payments-title" className="text-lg font-bold text-[#16364b]">Información para pagos</h2>
+              <p className="mt-3 font-semibold">BCP · {paymentAccount.currencyName}</p>
+              <p className="mt-1 text-sm text-slate-600">Titular: {paymentAccount.accountHolder}</p>
+              <dl className="mt-6 divide-y divide-slate-100">
+                {[{ label: 'Número de cuenta', value: paymentAccount.accountNumber, button: 'Copiar cuenta' }, { label: 'CCI', value: paymentAccount.interbankNumber, button: 'Copiar CCI' }].map((account) => <div key={account.label} className="py-4 first:pt-0">
+                  <dt className="text-sm text-slate-600">{account.label}</dt>
+                  <dd className="mt-2 flex min-w-0 flex-wrap items-center justify-between gap-3">
+                    <span className="min-w-0 select-all break-all font-mono text-base font-semibold">{account.value}</span>
+                    <button type="button" disabled={copyingAccount} onClick={() => copyPaymentAccount(account.value, account.label)} className="min-h-11 rounded-lg border border-[#237e9e] px-4 py-2 text-sm font-semibold text-[#19627c] hover:bg-sky-50 disabled:opacity-50">{account.button}</button>
+                  </dd>
+                </div>)}
+              </dl>
+              <p role="status" className="mt-3 text-sm font-medium text-slate-600">{copyMessage}</p>
+            </aside>}
+          </div>
+          <section className="mt-8 flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <div><h2 className="font-bold text-[#16364b]">Normas de convivencia</h2><p className="mt-1 text-sm leading-6 text-slate-600">Revisa las normas del condominio antes de tu estadía.</p></div>
+            <a href="/documentos/normas-de-convivencia.pdf" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 shrink-0 items-center gap-2 font-semibold text-[#19627c] underline underline-offset-4">Ver documento PDF <span aria-hidden="true">↗</span><span className="sr-only"> · Se abre en una nueva pestaña</span></a>
+          </section>
         </div>
-
-      </div>
-
+      </article>
     </main>
-
   )
 }

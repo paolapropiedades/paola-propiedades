@@ -227,7 +227,7 @@ export function GuestListForm({ token }: { token: string }) {
   const isLate = metadata.submission_deadline < todayInLima()
 
   return (
-    <section className="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-5 text-left">
+    <section className="rounded-xl bg-[#eaf6fb] p-4 text-left sm:p-5">
       <h4 className="text-lg font-bold text-gray-950">
         Lista de huéspedes, vehículos y mascotas
       </h4>
@@ -249,7 +249,7 @@ export function GuestListForm({ token }: { token: string }) {
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="mt-4 rounded-lg bg-gray-950 px-4 py-3 text-sm font-bold text-white hover:bg-gray-800"
+        className="mt-4 min-h-11 w-full rounded-lg bg-[#237e9e] px-4 py-3 text-sm font-bold text-white hover:bg-[#19627c]"
       >
         {open
           ? 'Cerrar formulario'
@@ -472,7 +472,7 @@ export function GuestListForm({ token }: { token: string }) {
             type="button"
             onClick={saveGuestList}
             disabled={saving}
-            className="mt-5 w-full rounded-lg bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800 disabled:opacity-50"
+            className="mt-5 w-full rounded-lg bg-[#237e9e] px-5 py-3 font-bold text-white hover:bg-[#19627c] disabled:opacity-50"
           >
             {saving ? 'Guardando...' : 'Guardar lista'}
           </button>
