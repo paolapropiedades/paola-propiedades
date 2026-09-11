@@ -77,6 +77,10 @@ export default function Home() {
   const [createdReservationLink, setCreatedReservationLink] =
     useState('')
 
+  const reservationInvitation = createdReservationLink
+    ? `¡Hola! Por favor, completa tus datos en el siguiente enlace para confirmar tu reserva:\n\n${createdReservationLink}\n\n¡Gracias!\nPaola Cornejo – Propiedades en la playa`
+    : ''
+
   const [selectedReservation, setSelectedReservation] =
     useState<Reservation | null>(null)
 
@@ -459,10 +463,10 @@ export default function Home() {
 
     try {
       await navigator.clipboard.writeText(
-        createdReservationLink
+        reservationInvitation
       )
 
-      setMessage('✓ Link copiado al portapapeles')
+      setMessage('✓ Mensaje con enlace copiado al portapapeles')
     } catch {
       setMessage(
         'No se pudo copiar automáticamente.'
@@ -1233,13 +1237,15 @@ export default function Home() {
 
                 </div>
 
-                <label className="mt-5 block text-sm font-semibold text-gray-900">
-                  Link para el inquilino
+                <label htmlFor="reservation-invitation" className="mt-5 block text-sm font-semibold text-gray-900">
+                  Mensaje para el inquilino
                 </label>
 
-                <input
+                <textarea
+                  id="reservation-invitation"
                   readOnly
-                  value={createdReservationLink}
+                  rows={7}
+                  value={reservationInvitation}
                   className="mt-2 w-full rounded-lg border border-gray-300 bg-gray-100 p-3 text-sm text-gray-900"
                 />
 
@@ -1247,7 +1253,7 @@ export default function Home() {
                   onClick={copyReservationLink}
                   className="mt-4 w-full rounded-lg border border-gray-300 px-5 py-3 font-semibold text-gray-900 hover:bg-gray-100"
                 >
-                  Copiar link
+                  Copiar mensaje y enlace
                 </button>
 
                 {message && (
