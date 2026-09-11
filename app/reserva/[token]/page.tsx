@@ -387,11 +387,12 @@ export default function ReservationPage({
               {success ? '¡Tu reserva está confirmada!' : 'Confirma tu reserva'}
             </h1>
             {success && <p className="mt-3 text-sm text-slate-600">Te esperamos en</p>}
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
-              <h2 className="min-w-0 break-words text-2xl font-extrabold tracking-tight text-[#16364b] sm:text-3xl">
+            <div className="mt-3 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 sm:gap-x-3">
+              <h2 className="min-w-0 break-words text-2xl font-bold tracking-tight text-[#16364b]">
                 {reservation.property_name ?? 'Propiedad'}
               </h2>
-              {Number(reservation.max_guests) > 0 && <span aria-label={`Capacidad máxima: ${reservation.max_guests} personas`} className="rounded-full bg-[#eaf6fb] px-3 py-1.5 text-sm font-bold text-[#19627c]">
+              {Number(reservation.max_guests) > 0 && <span aria-label={`Capacidad máxima: ${reservation.max_guests} personas`} className="inline-flex items-baseline gap-2 whitespace-nowrap text-sm font-medium text-slate-500 sm:gap-3 sm:text-base">
+                <span aria-hidden="true" className="text-slate-300">·</span>
                 Hasta {reservation.max_guests} pax
               </span>}
             </div>
