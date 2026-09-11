@@ -374,28 +374,28 @@ export default function ReservationPage({
   const money = (amount: number) => `${reservation.currency === 'PEN' ? 'S/' : 'US$'} ${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   return (
-    <main className="min-h-screen bg-[#f3f8fa] px-3 py-5 text-slate-900 sm:px-6 sm:py-8 lg:py-12">
-      <article className="mx-auto max-w-5xl rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70">
-        <header className="border-b border-slate-100 px-5 py-5 sm:px-8">
-          <BrandLogo className="mx-auto h-auto w-64 max-w-full sm:mx-0 sm:w-72" priority />
+    <main className="min-h-screen bg-[#f3f8fa] px-3 py-5 text-slate-900 sm:px-6 sm:py-6 lg:py-8">
+      <article className="mx-auto max-w-4xl rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70">
+        <header className="px-5 pt-6 pb-3 sm:px-8">
+          <BrandLogo className="mx-auto h-auto w-56 max-w-full sm:w-60" priority />
         </header>
-        <div className="px-5 py-7 sm:p-8 lg:p-10">
-          <section className="border-b border-slate-200 pb-7 text-center" aria-labelledby="reservation-title">
+        <div className="px-5 pt-3 pb-6 sm:px-8 sm:pb-8">
+          <section className="border-b border-slate-200 pb-6 text-center" aria-labelledby="reservation-title">
             {success && <div aria-hidden="true" className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-2xl text-green-700">✓</div>}
-            <h1 id="reservation-title" className="text-2xl font-bold tracking-tight text-[#16364b] sm:text-3xl">
+            <h1 id="reservation-title" className="text-2xl font-bold tracking-tight text-[#16364b] sm:text-[28px]">
               {success ? '¡Tu reserva está confirmada!' : 'Confirma tu reserva'}
             </h1>
             <p className="mt-2 break-words text-lg font-semibold text-[#16364b]">
               {success ? 'Te esperamos en ' : ''}{reservation.property_name ?? 'Propiedad'}
             </p>
-            <dl className="mx-auto mt-6 grid max-w-2xl gap-4 text-sm sm:grid-cols-[1fr_1fr_auto] sm:gap-6">
+            <dl className="mx-auto mt-5 grid max-w-2xl grid-cols-2 gap-4 rounded-xl bg-[#f3f8fa] p-4 text-sm sm:grid-cols-3 sm:gap-4">
               <div><dt className="text-slate-500">Ingreso</dt><dd className="mt-1 font-semibold">{formatDate(reservation.check_in)}</dd></div>
               <div><dt className="text-slate-500">Salida</dt><dd className="mt-1 font-semibold">{formatDate(reservation.check_out)}</dd></div>
-              <div><dt className="text-slate-500">Estadía</dt><dd className="mt-1 font-semibold">{reservation.nights} noches</dd></div>
+              <div className="col-span-2 border-t border-slate-200 pt-3 sm:col-span-1 sm:border-t-0 sm:pt-0"><dt className="text-slate-500">Estadía</dt><dd className="mt-1 font-semibold">{reservation.nights} noches</dd></div>
             </dl>
           </section>
 
-          <div className="mt-7 grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-10">
+          <div className="mt-7 grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-7">
             <div className="min-w-0 space-y-7">
               {success && <GuestListForm token={token} />}
               <section aria-labelledby="summary-title">
