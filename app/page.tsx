@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { BrandLogo } from '@/app/components/brand-logo'
 import { LogoutButton } from '@/app/components/logout-button'
 import { AdminMobileNav } from '@/app/components/admin-mobile-nav'
+import { AdminDialog } from '@/app/components/admin-dialog'
 import { ReservationGuarantee } from '@/app/components/reservation-guarantee'
 
 type Property = {
@@ -60,6 +61,8 @@ export default function Home() {
 
   const [currentDate, setCurrentDate] = useState(new Date())
   const [showModal, setShowModal] = useState(false)
+  const [calendarView, setCalendarView] = useState<'agenda' | 'month'>('agenda')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const [propertyId, setPropertyId] = useState('')
   const [checkIn, setCheckIn] = useState('')
@@ -341,6 +344,17 @@ export default function Home() {
   async function createReservation() {
     setMessage('')
     setCreatedReservationLink('')
+    const errors: Record<string, string> = {}
+    if (!propertyId) errors.propertyId = 'Selecciona una propiedad.'
+    if (!checkIn) errors.checkIn = 'Selecciona la fecha de ingreso.'
+    if (!checkOut || nights <= 0) errors.checkOut = 'La salida debe ser posterior al ingreso.'
+    if (!Number.isFinite(totalPrice) || totalPrice <= 0) errors.totalPriceInput = 'Ingresa un monto mayor a cero.'
+    if (guaranteeAmountInput && (!/^\d+(\.\d{1,2})?$/.test(guaranteeAmountInput) || Number(guaranteeAmountInput) > 9999999999.99)) errors.guaranteeAmountInput = 'Ingresa un monto válido con hasta dos decimales.'
+    setFieldErrors(errors)
+    if (Object.keys(errors).length) {
+      requestAnimationFrame(() => document.getElementById(`new-${Object.keys(errors)[0]}`)?.focus())
+      return
+    }
 
     if (
       !propertyId ||
@@ -380,10 +394,10 @@ export default function Home() {
     if (
       paymentSchedule.some(
         (installment) =>
-          !installment.due_date || Number(installment.amount) <= 0
+          !installment.due_date || !Number.isFinite(Number(installment.amount)) || Number(installment.amount) <= 0
       )
     ) {
-      setMessage('Completa la fecha y un monto válido para cada cuota.')
+      setFieldErrors((current) => ({ ...current, schedule: 'Completa la fecha y un monto válido para cada cuota.' }))
       return
     }
 
@@ -391,9 +405,7 @@ export default function Home() {
       paymentSchedule.length > 0 &&
       Math.round(scheduledTotal * 100) !== Math.round(totalPrice * 100)
     ) {
-      setMessage(
-        `Las cuotas deben sumar exactamente ${currencyLabel(reservationCurrency)} ${formatMoney(totalPrice)}.`
-      )
+      setFieldErrors((current) => ({ ...current, schedule: `Las cuotas deben sumar exactamente ${currencyLabel(reservationCurrency)} ${formatMoney(totalPrice)}.` }))
       return
     }
 
@@ -475,6 +487,7 @@ export default function Home() {
   }
 
   function closeModal() {
+    setFieldErrors({})
     setShowModal(false)
     setPropertyId('')
     setCheckIn('')
@@ -500,7 +513,7 @@ export default function Home() {
     const remaining =
       Math.max(0, total - alreadyPaid)
 
-    if (!amount || amount <= 0) {
+    if (!Number.isFinite(amount) || amount <= 0) {
       setPaymentMessage(
         `Ingresa un monto mayor a ${currencyLabel(selectedReservation.currency)} 0.`
       )
@@ -639,6 +652,10 @@ export default function Home() {
   const selectedRemaining =
     Math.max(0, selectedTotal - selectedPaid)
 
+  const monthReservations = reservations
+    .filter((r) => r.check_in < `${month === 11 ? year + 1 : year}-${String(month === 11 ? 1 : month + 2).padStart(2, '0')}-01` && r.check_out >= `${year}-${String(month + 1).padStart(2, '0')}-01`)
+    .sort((a, b) => a.check_in.localeCompare(b.check_in))
+
   const upcomingReservations = reservations
     .filter(
       (reservation) =>
@@ -743,7 +760,7 @@ export default function Home() {
 
         <div className="mt-10 overflow-hidden rounded-xl border border-gray-300 bg-white shadow-sm">
 
-          <div className="flex items-center justify-between border-b border-gray-300 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-300 p-4">
 
             <div>
               <h2 className="text-lg font-bold text-gray-950">
@@ -787,7 +804,19 @@ export default function Home() {
           </div>
 
 
-          <div className="overflow-x-auto lg:overflow-x-hidden">
+          <div className="flex gap-2 border-b border-gray-200 p-3 lg:hidden" aria-label="Vista de disponibilidad">
+            <button type="button" aria-pressed={calendarView === 'agenda'} onClick={() => setCalendarView('agenda')} className="min-h-11 rounded-lg border px-4 py-2 font-semibold aria-pressed:bg-gray-950 aria-pressed:text-white">Agenda</button>
+            <button type="button" aria-pressed={calendarView === 'month'} onClick={() => setCalendarView('month')} className="min-h-11 rounded-lg border px-4 py-2 font-semibold aria-pressed:bg-gray-950 aria-pressed:text-white">Mes</button>
+          </div>
+          {calendarView === 'agenda' && <div className="space-y-3 p-4 lg:hidden">
+            <p className="text-sm text-gray-600">Reservas del mes. Usa la vista Mes para consultar los días libres.</p>
+            {monthReservations.length === 0 && <p className="py-4 text-sm font-semibold text-gray-700">No hay reservas para este mes.</p>}
+            {monthReservations.map((r) => <button key={r.id} type="button" onClick={() => openReservation(r)} className="w-full rounded-xl border border-gray-200 p-4 text-left">
+              <span className="block font-bold">{getPropertyName(r)}</span><span className="mt-1 block text-sm">{formatDate(r.check_in)} – {formatDate(r.check_out)}</span><span className="mt-1 block break-words text-sm text-gray-600">{r.tenant_full_name || 'Pendiente de confirmar'} · {getPaymentStatus(r)}</span>
+            </button>)}
+          </div>}
+          <div className={`${calendarView === 'agenda' ? 'hidden lg:block' : ''} overflow-x-auto`}>
+
 
             <div
               className="min-w-[900px] lg:min-w-0 lg:w-full"
@@ -855,6 +884,10 @@ export default function Home() {
                       <div
                         key={`${property.id}-${day}`}
                         title={getTooltip(reservation)}
+                        role={reservation ? 'button' : undefined}
+                        tabIndex={reservation ? 0 : undefined}
+                        aria-label={`${property.name}, día ${day}: ${getTooltip(reservation)}`}
+                        onKeyDown={(event) => { if (reservation && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); openReservation(reservation) } }}
                         onClick={() => {
                           if (reservation) {
                             openReservation(reservation)
@@ -864,11 +897,11 @@ export default function Home() {
                           reservation
                             ? 'cursor-pointer'
                             : ''
-                        } ${getReservationColor(reservation)}`}
+                        } ${getReservationColor(reservation)} ${new Date().getFullYear() === year && new Date().getMonth() === month && new Date().getDate() === day ? 'ring-2 ring-inset ring-blue-600' : ''} ${!reservation && [0, 6].includes(new Date(year, month, day).getDay()) ? 'bg-slate-100' : ''}`}
                       >
 
                         {showName && (
-                          <span className="absolute left-1 z-20 whitespace-nowrap rounded bg-gray-950 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">
+                          <span className="absolute left-1 z-20 max-w-[100px] truncate rounded bg-gray-950 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">
                             {reservation.tenant_full_name}
                           </span>
                         )}
@@ -931,10 +964,7 @@ export default function Home() {
 
       {showModal && (
 
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-
-          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto overscroll-contain rounded-2xl bg-white p-6 shadow-xl">
-
+        <AdminDialog label="Nueva reserva" onClose={closeModal}>
             <div className="flex items-center justify-between">
 
               <h2 className="text-xl font-bold text-gray-950">
@@ -943,7 +973,7 @@ export default function Home() {
 
               <button
                 onClick={closeModal}
-                className="text-2xl text-gray-600 hover:text-gray-950"
+                aria-label="Cerrar nueva reserva" className="min-h-11 min-w-11 text-2xl text-gray-600 hover:text-gray-950"
               >
                 ×
               </button>
@@ -955,14 +985,16 @@ export default function Home() {
 
               <div className="mt-6">
 
-                <label className="text-sm font-semibold text-gray-900">
+                <label htmlFor="new-propertyId" className="text-sm font-semibold text-gray-900">
                   Propiedad
                 </label>
 
                 <select
-                  value={propertyId}
+                  id="new-propertyId"
+                    aria-invalid={Boolean(fieldErrors.propertyId)}
+                    value={propertyId}
                   onChange={(e) =>
-                    setPropertyId(e.target.value)
+                    { setPropertyId(e.target.value); setFieldErrors((current) => ({ ...current, propertyId: '' })) }
                   }
                   className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-950"
                 >
@@ -979,39 +1011,46 @@ export default function Home() {
                     </option>
                   ))}
                 </select>
+                {fieldErrors.propertyId && <p role="alert" className="mt-1 text-sm text-red-700">{fieldErrors.propertyId}</p>}
 
 
-                <div className="mt-5 grid grid-cols-2 gap-4">
+                <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
 
                   <div>
-                    <label className="text-sm font-semibold text-gray-900">
+                    <label htmlFor="new-checkIn" className="text-sm font-semibold text-gray-900">
                       Check-in
                     </label>
 
                     <input
                       type="date"
-                      value={checkIn}
+                      id="new-checkIn"
+                    aria-invalid={Boolean(fieldErrors.checkIn)}
+                    value={checkIn}
                       onChange={(e) =>
-                        setCheckIn(e.target.value)
+                        { setCheckIn(e.target.value); setFieldErrors((current) => ({ ...current, checkIn: '' })) }
                       }
                       className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-950"
                     />
+                {fieldErrors.checkIn && <p role="alert" className="mt-1 text-sm text-red-700">{fieldErrors.checkIn}</p>}
                   </div>
 
 
                   <div>
-                    <label className="text-sm font-semibold text-gray-900">
+                    <label htmlFor="new-checkOut" className="text-sm font-semibold text-gray-900">
                       Check-out
                     </label>
 
                     <input
                       type="date"
-                      value={checkOut}
+                      id="new-checkOut"
+                    aria-invalid={Boolean(fieldErrors.checkOut)}
+                    value={checkOut}
                       onChange={(e) =>
-                        setCheckOut(e.target.value)
+                        { setCheckOut(e.target.value); setFieldErrors((current) => ({ ...current, checkOut: '' })) }
                       }
                       className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-950"
                     />
+                {fieldErrors.checkOut && <p role="alert" className="mt-1 text-sm text-red-700">{fieldErrors.checkOut}</p>}
                   </div>
 
                 </div>
@@ -1021,7 +1060,7 @@ export default function Home() {
 
                 <div className="mt-5">
 
-                  <label className="text-sm font-semibold text-gray-900">
+                  <label htmlFor="new-totalPriceInput" className="text-sm font-semibold text-gray-900">
                     Monto total de la reserva
                   </label>
 
@@ -1029,13 +1068,16 @@ export default function Home() {
                     type="number"
                     min="0"
                     step="0.01"
+                    id="new-totalPriceInput"
+                    aria-invalid={Boolean(fieldErrors.totalPriceInput)}
                     value={totalPriceInput}
                     onChange={(e) =>
-                      setTotalPriceInput(e.target.value)
+                      { setTotalPriceInput(e.target.value); setFieldErrors((current) => ({ ...current, totalPriceInput: '' })) }
                     }
                     placeholder="3500.00"
                     className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-950 placeholder:text-gray-500"
                   />
+                {fieldErrors.totalPriceInput && <p role="alert" className="mt-1 text-sm text-red-700">{fieldErrors.totalPriceInput}</p>}
 
                   <p className="mt-2 text-xs font-medium text-gray-500">
                     Ingresa directamente el precio final acordado.
@@ -1046,21 +1088,23 @@ export default function Home() {
                 {/* CRONOGRAMA DE PAGOS */}
 
                 <div className="mt-5">
-                  <label htmlFor="new-reservation-guarantee" className="text-sm font-semibold text-gray-900">
+                  <label htmlFor="new-guaranteeAmountInput" className="text-sm font-semibold text-gray-900">
                     Depósito de garantía ({currencyLabel(reservationCurrency)})
                   </label>
                   <input
-                    id="new-reservation-guarantee"
+                    id="new-guaranteeAmountInput"
                     type="number"
                     min="0"
                     max="9999999999.99"
                     step="0.01"
+                    aria-invalid={Boolean(fieldErrors.guaranteeAmountInput)}
                     value={guaranteeAmountInput}
                     onChange={(event) => setGuaranteeAmountInput(event.target.value)}
                     placeholder="0.00"
                     aria-describedby="new-reservation-guarantee-help"
                     className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-950 placeholder:text-gray-500"
                   />
+                {fieldErrors.guaranteeAmountInput && <p role="alert" className="mt-1 text-sm text-red-700">{fieldErrors.guaranteeAmountInput}</p>}
                   <p id="new-reservation-guarantee-help" className="mt-2 text-xs font-medium text-gray-500">
                     Opcional. Se muestra al inquilino y se entrega por separado del alquiler y sus cuotas.
                   </p>
@@ -1070,6 +1114,7 @@ export default function Home() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h3 className="font-bold text-gray-950">Cronograma de pagos</h3>
+                      {fieldErrors.schedule && <p role="alert" className="mt-1 text-sm text-red-700">{fieldErrors.schedule}</p>}
                       <p className="mt-1 text-xs text-gray-600">Opcional. Las cuotas deben sumar el total.</p>
                     </div>
                     <button
@@ -1091,7 +1136,7 @@ export default function Home() {
                   ) : (
                     <div className="mt-4 space-y-3">
                       {paymentSchedule.map((installment, index) => (
-                        <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+                        <div key={index} className="grid grid-cols-1 gap-2 rounded-lg border border-gray-200 p-3 sm:grid-cols-[1fr_1fr_auto]">
                           <input
                             type="date"
                             value={installment.due_date}
@@ -1273,9 +1318,7 @@ export default function Home() {
 
             )}
 
-          </div>
-
-        </div>
+        </AdminDialog>
 
       )}
 
@@ -1284,10 +1327,7 @@ export default function Home() {
 
       {selectedReservation && (
 
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
-
+        <AdminDialog label="Detalle de reserva" onClose={() => { setSelectedReservation(null); setPayments([]) }}>
             <div className="flex items-start justify-between">
 
               <div>
@@ -1312,7 +1352,7 @@ export default function Home() {
                   setSelectedReservation(null)
                   setPayments([])
                 }}
-                className="text-2xl text-gray-500 hover:text-gray-950"
+                aria-label="Cerrar detalle" className="min-h-11 min-w-11 text-2xl text-gray-500 hover:text-gray-950"
               >
                 ×
               </button>
@@ -1502,7 +1542,7 @@ export default function Home() {
                     Registrar nuevo pago
                   </h4>
 
-                  <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
 
                     <div>
 
@@ -1654,9 +1694,7 @@ export default function Home() {
 
             </div>
 
-          </div>
-
-        </div>
+        </AdminDialog>
 
       )}
 

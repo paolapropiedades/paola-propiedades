@@ -1234,7 +1234,7 @@ export default function ReservationsPage() {
           ) : (
 
             <>
-            <div className="divide-y divide-gray-200 md:hidden">
+            <div className="divide-y divide-gray-200 xl:hidden">
 
               {filteredReservations.map(
                 (reservation) => {
@@ -1416,7 +1416,7 @@ export default function ReservationsPage() {
 
             </div>
 
-            <div className="hidden w-full md:block">
+            <div className="hidden w-full xl:block">
 
               <table className="w-full table-fixed border-collapse text-xs xl:text-sm">
 

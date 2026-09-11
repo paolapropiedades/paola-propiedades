@@ -13,6 +13,7 @@ export function ReservationGuarantee({
   const [amount, setAmount] = useState('')
   const [received, setReceived] = useState(false)
   const [receivedOn, setReceivedOn] = useState('')
+  const [returnedOn, setReturnedOn] = useState('')
   const [loading, setLoading] = useState(true)
   const [available, setAvailable] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -24,7 +25,7 @@ export function ReservationGuarantee({
       try {
         const { data, error } = await supabase
           .from('reservations')
-          .select('guarantee_amount, guarantee_received_on')
+          .select('guarantee_amount, guarantee_received_on, guarantee_returned_on')
           .eq('id', reservationId)
           .single()
         if (!active) return
@@ -32,6 +33,7 @@ export function ReservationGuarantee({
         setAmount(String(data.guarantee_amount ?? 0))
         setReceived(Boolean(data.guarantee_received_on))
         setReceivedOn(data.guarantee_received_on ?? '')
+        setReturnedOn(data.guarantee_returned_on ?? '')
         setAvailable(true)
       } catch {
         if (active) setMessage('No se pudo cargar la garantía. Vuelve a abrir la reserva para intentarlo nuevamente.')
@@ -56,12 +58,17 @@ export function ReservationGuarantee({
       setMessage('Para registrar la recepción, ingresa un monto mayor a cero y la fecha.')
       return
     }
+    if (returnedOn && (!received || !receivedOn || returnedOn < receivedOn)) {
+      setMessage('La devolución requiere una recepción y no puede ser anterior a ella.')
+      return
+    }
     setSaving(true)
     try {
       const { error } = await supabase
         .from('reservations')
         .update({
           guarantee_amount: value,
+          guarantee_returned_on: returnedOn || null,
           guarantee_received_on: received ? receivedOn : null,
         })
         .eq('id', reservationId)
@@ -108,6 +115,12 @@ export function ReservationGuarantee({
                   className="mt-2 w-full rounded-lg border border-gray-300 p-3 text-gray-950" />
               </div>
             )}
+            {received && <div>
+              <label htmlFor="guarantee-returned-on" className="text-sm font-semibold text-gray-800">Fecha de devolución total (opcional)</label>
+              <input id="guarantee-returned-on" type="date" min={receivedOn || undefined} value={returnedOn} onChange={(event) => { setReturnedOn(event.target.value); setMessage('') }} className="mt-2 w-full rounded-lg border border-gray-300 p-3 text-gray-950" />
+              <p className="mt-1 text-sm text-gray-600">Déjala vacía mientras la garantía esté pendiente de devolución.</p>
+            </div>}
+            <p className="text-sm font-semibold text-gray-700">Estado: {returnedOn ? 'Devuelta' : received ? 'Recibida' : 'Pendiente de entrega'}</p>
             <button type="submit" className="w-full rounded-lg bg-gray-950 px-5 py-3 font-bold text-white hover:bg-gray-800">
               {saving ? 'Guardando...' : 'Guardar garantía'}
             </button>

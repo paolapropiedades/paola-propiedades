@@ -18,6 +18,7 @@ type Reservation = {
   payment_schedule: Array<{ due_date: string; amount: number }>
   guarantee_amount?: number
   guarantee_received_on?: string | null
+  guarantee_returned_on?: string | null
 }
 
 const PAOLA_PROPERTIES = new Set([
@@ -403,7 +404,7 @@ export default function ReservationPage({
                   <div className="flex flex-wrap justify-between gap-2 py-3"><dt>Alquiler</dt><dd className="font-bold tabular-nums">{money(reservation.total_price)}</dd></div>
                   {Number(reservation.guarantee_amount) > 0 && <div className="flex flex-wrap justify-between gap-2 py-3"><dt>Depósito de garantía</dt><dd className="font-bold tabular-nums">{money(Number(reservation.guarantee_amount))}</dd></div>}
                 </dl>
-                {Number(reservation.guarantee_amount) > 0 && <div className="mt-2 text-sm leading-6 text-slate-600"><p>La garantía se entrega por separado del alquiler.</p><p>{reservation.guarantee_received_on ? `Recibida el ${formatDate(reservation.guarantee_received_on)}` : 'Garantía pendiente de entrega'}</p></div>}
+                {Number(reservation.guarantee_amount) > 0 && <div className="mt-2 text-sm leading-6 text-slate-600"><p>La garantía se entrega por separado del alquiler.</p><p>{reservation.guarantee_returned_on ? `Devuelta el ${formatDate(reservation.guarantee_returned_on)}` : reservation.guarantee_received_on ? `Recibida el ${formatDate(reservation.guarantee_received_on)}` : 'Garantía pendiente de entrega'}</p></div>}
               </section>
               {reservation.payment_schedule.length > 0 && <section>
                 <h2 className="text-lg font-bold text-[#16364b]">Cronograma de pagos</h2>
