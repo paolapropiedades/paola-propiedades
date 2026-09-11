@@ -14,6 +14,7 @@ type Reservation = {
   total_price: number
   reservation_status: string
   property_name: string
+  max_guests?: number
   currency: 'USD' | 'PEN'
   payment_schedule: Array<{ due_date: string; amount: number }>
   guarantee_amount?: number
@@ -385,9 +386,15 @@ export default function ReservationPage({
             <h1 id="reservation-title" className="text-2xl font-bold tracking-tight text-[#16364b] sm:text-[28px]">
               {success ? '¡Tu reserva está confirmada!' : 'Confirma tu reserva'}
             </h1>
-            <p className="mt-2 break-words text-lg font-semibold text-[#16364b]">
-              {success ? 'Te esperamos en ' : ''}{reservation.property_name ?? 'Propiedad'}
-            </p>
+            {success && <p className="mt-3 text-sm text-slate-600">Te esperamos en</p>}
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+              <h2 className="min-w-0 break-words text-2xl font-extrabold tracking-tight text-[#16364b] sm:text-3xl">
+                {reservation.property_name ?? 'Propiedad'}
+              </h2>
+              {Number(reservation.max_guests) > 0 && <span aria-label={`Capacidad máxima: ${reservation.max_guests} personas`} className="rounded-full bg-[#eaf6fb] px-3 py-1.5 text-sm font-bold text-[#19627c]">
+                Hasta {reservation.max_guests} pax
+              </span>}
+            </div>
             <dl className="mx-auto mt-5 grid max-w-2xl grid-cols-2 gap-4 rounded-xl bg-[#f3f8fa] p-4 text-sm sm:grid-cols-3 sm:gap-4">
               <div><dt className="text-slate-500">Ingreso</dt><dd className="mt-1 font-semibold">{formatDate(reservation.check_in)}</dd></div>
               <div><dt className="text-slate-500">Salida</dt><dd className="mt-1 font-semibold">{formatDate(reservation.check_out)}</dd></div>
