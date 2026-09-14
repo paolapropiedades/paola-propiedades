@@ -1065,7 +1065,7 @@ export default function Home() {
                   </label>
 
                   <input
-                    type="number"
+                    type="text" inputMode="decimal" pattern="[0-9]+([.][0-9]{1,2})?"
                     min="0"
                     step="0.01"
                     id="new-totalPriceInput"
@@ -1093,7 +1093,7 @@ export default function Home() {
                   </label>
                   <input
                     id="new-guaranteeAmountInput"
-                    type="number"
+                    type="text" inputMode="decimal" pattern="[0-9]+([.][0-9]{1,2})?"
                     min="0"
                     max="9999999999.99"
                     step="0.01"
@@ -1153,7 +1153,7 @@ export default function Home() {
                             className="min-w-0 rounded-lg border border-gray-300 p-2 text-gray-950"
                           />
                           <input
-                            type="number"
+                            type="text" inputMode="decimal" pattern="[0-9]+([.][0-9]{1,2})?"
                             min="0.01"
                             step="0.01"
                             value={installment.amount}
@@ -1551,7 +1551,7 @@ export default function Home() {
                       </label>
 
                       <input
-                        type="number"
+                        type="text" inputMode="decimal" pattern="[0-9]+([.][0-9]{1,2})?"
                         min="0.01"
                         step="0.01"
                         max={selectedRemaining}

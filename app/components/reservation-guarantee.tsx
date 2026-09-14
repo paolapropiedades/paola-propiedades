@@ -97,7 +97,7 @@ export function ReservationGuarantee({
               <label htmlFor="guarantee-amount" className="text-sm font-semibold text-gray-800">
                 Monto de garantía ({currency === 'PEN' ? 'S/' : 'US$'})
               </label>
-              <input id="guarantee-amount" type="number" min="0" max="9999999999.99" step="0.01" required
+              <input id="guarantee-amount" type="text" inputMode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" min="0" max="9999999999.99" step="0.01" required
                 value={amount} onChange={(event) => { setAmount(event.target.value); setMessage('') }}
                 className="mt-2 w-full rounded-lg border border-gray-300 p-3 text-gray-950" />
             </div>
