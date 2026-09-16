@@ -7,6 +7,8 @@ import { utils, writeFileXLSX } from 'xlsx'
 import { BrandLogo } from '@/app/components/brand-logo'
 import { LogoutButton } from '@/app/components/logout-button'
 import { AdminMobileNav } from '@/app/components/admin-mobile-nav'
+import { AdminDialog } from '@/app/components/admin-dialog'
+import { ReservationGuarantee } from '@/app/components/reservation-guarantee'
 
 type Property = {
   id: number
@@ -33,6 +35,13 @@ type Reservation = {
   tenant_email: string | null
   created_at: string
   currency: 'USD' | 'PEN'
+  payment_schedule: Array<{
+    due_date: string
+    amount: number
+  }>
+  guarantee_amount: number
+  guarantee_received_on: string | null
+  guarantee_returned_on: string | null
 }
 
 type GuestList = {
@@ -46,6 +55,15 @@ type GuestList = {
   pets: Array<{ name: string; size: string }>
   submitted_at: string
   updated_at: string
+}
+
+type Payment = {
+  id: number
+  reservation_id: number
+  amount: number
+  payment_date: string
+  created_at: string
+  currency: 'USD' | 'PEN'
 }
 
 type ReservationPeriod = 'upcoming' | 'history'
@@ -103,6 +121,16 @@ export default function ReservationsPage() {
   const [search, setSearch] = useState('')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [exportOwner, setExportOwner] = useState<OwnerFilter>('all')
+  const [selectedReservation, setSelectedReservation] =
+    useState<Reservation | null>(null)
+  const [payments, setPayments] = useState<Payment[]>([])
+  const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentDate, setPaymentDate] = useState(
+    new Date().toISOString().split('T')[0]
+  )
+  const [registeringPayment, setRegisteringPayment] = useState(false)
+  const [paymentMessage, setPaymentMessage] = useState('')
+  const [cancelling, setCancelling] = useState(false)
 
   const loadData = useCallback(async () => {
     const {
@@ -144,7 +172,11 @@ export default function ReservationsPage() {
         tenant_phone,
         tenant_email,
         created_at,
-        currency
+        currency,
+        payment_schedule,
+        guarantee_amount,
+        guarantee_received_on,
+        guarantee_returned_on
       `)
       .order('check_in', {
         ascending: false,
@@ -192,6 +224,130 @@ export default function ReservationsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData()
   }, [loadData])
+
+  async function openReservation(reservation: Reservation) {
+    setSelectedReservation(reservation)
+    setPayments([])
+    setPaymentAmount('')
+    setPaymentMessage('')
+    setPaymentDate(new Date().toISOString().split('T')[0])
+
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('reservation_id', reservation.id)
+      .order('payment_date', { ascending: false })
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Payments error:', error)
+      return
+    }
+
+    setPayments((data ?? []) as Payment[])
+  }
+
+  function closeReservation() {
+    setSelectedReservation(null)
+    setPayments([])
+    setPaymentMessage('')
+  }
+
+  async function registerPayment() {
+    if (!selectedReservation) return
+
+    setPaymentMessage('')
+    const amount = Number(paymentAmount)
+    const total = Number(selectedReservation.total_price)
+    const alreadyPaid = Number(selectedReservation.amount_paid || 0)
+    const remaining = Math.max(0, total - alreadyPaid)
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setPaymentMessage(`Ingresa un monto mayor a ${currencyLabel(selectedReservation.currency)} 0.`)
+      return
+    }
+    if (!paymentDate) {
+      setPaymentMessage('Selecciona la fecha del pago.')
+      return
+    }
+    if (amount > remaining) {
+      setPaymentMessage(`El monto supera el saldo pendiente de ${currencyLabel(selectedReservation.currency)} ${formatMoney(remaining)}.`)
+      return
+    }
+
+    setRegisteringPayment(true)
+    const { data: paymentId, error } = await supabase.rpc(
+      'register_payment_in_currency',
+      {
+        p_reservation_id: selectedReservation.id,
+        p_amount: amount,
+        p_payment_date: paymentDate,
+        p_currency: selectedReservation.currency,
+      }
+    )
+
+    if (error) {
+      console.error(error)
+      setPaymentMessage(`No se pudo registrar el pago: ${error.message}`)
+      setRegisteringPayment(false)
+      return
+    }
+
+    const updatedReservation = {
+      ...selectedReservation,
+      amount_paid: alreadyPaid + amount,
+      payment_status: alreadyPaid + amount >= total ? 'paid' : 'partial',
+    }
+    setSelectedReservation(updatedReservation)
+    setReservations((current) => current.map((reservation) =>
+      reservation.id === updatedReservation.id ? updatedReservation : reservation
+    ))
+    setPaymentAmount('')
+    setPaymentMessage('✓ Pago registrado correctamente.')
+
+    try {
+      const { error: emailError } = await supabase.functions.invoke(
+        'send-victoria-payment-notification',
+        { body: { payment_id: Number(paymentId) } }
+      )
+      if (emailError) console.error('No se pudo enviar el aviso de pago:', emailError)
+    } catch (emailError) {
+      console.error('No se pudo enviar el aviso de pago:', emailError)
+    }
+
+    await openReservation(updatedReservation)
+    await loadData()
+    setPaymentMessage('✓ Pago registrado correctamente.')
+    setRegisteringPayment(false)
+  }
+
+  async function cancelReservation() {
+    if (!selectedReservation) return
+    const confirmed = window.confirm(
+      '¿Seguro que deseas cancelar esta reserva? Las fechas volverán a quedar disponibles.'
+    )
+    if (!confirmed) return
+
+    setCancelling(true)
+    const { error } = await supabase
+      .from('reservations')
+      .update({
+        reservation_status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+      })
+      .eq('id', selectedReservation.id)
+
+    if (error) {
+      console.error(error)
+      alert(`No se pudo cancelar la reserva: ${error.message}`)
+      setCancelling(false)
+      return
+    }
+
+    closeReservation()
+    await loadData()
+    setCancelling(false)
+  }
 
   const getPropertyName = useCallback((propertyId: number) => {
     return (
@@ -1266,7 +1422,17 @@ export default function ReservationsPage() {
                   return (
                     <article
                       key={reservation.id}
-                      className="space-y-4 p-5"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Ver detalle de la reserva de ${reservation.tenant_full_name ?? getPropertyName(reservation.property_id)}`}
+                      onClick={() => openReservation(reservation)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          void openReservation(reservation)
+                        }
+                      }}
+                      className="cursor-pointer space-y-4 p-5 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-gray-950"
                     >
                       <div>
                         <p className="text-lg font-bold text-gray-950">
@@ -1368,6 +1534,7 @@ export default function ReservationsPage() {
 
                       <Link
                         href="/"
+                        onClick={(event) => event.stopPropagation()}
                         className="inline-flex min-h-11 items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-bold text-gray-800 hover:bg-gray-50"
                       >
                         Ver en calendario
@@ -1384,12 +1551,10 @@ export default function ReservationsPage() {
                             </p>
                             <button
                               type="button"
-                              onClick={() =>
-                                downloadGuestList(
-                                  reservation,
-                                  guestList
-                                )
-                              }
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                downloadGuestList(reservation, guestList)
+                              }}
                               className="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-bold text-gray-800 hover:bg-gray-100"
                             >
                               ↓ Descargar
@@ -1529,7 +1694,15 @@ export default function ReservationsPage() {
 
                         <tr
                           key={reservation.id}
-                          className="border-t border-gray-200 hover:bg-gray-50"
+                          tabIndex={0}
+                          onClick={() => openReservation(reservation)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              void openReservation(reservation)
+                            }
+                          }}
+                          className="cursor-pointer border-t border-gray-200 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-gray-950"
                         >
 
                           <td className="break-words p-2 font-bold text-gray-950">
@@ -1654,12 +1827,10 @@ export default function ReservationsPage() {
 
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    downloadGuestList(
-                                      reservation,
-                                      guestList
-                                    )
-                                  }
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    downloadGuestList(reservation, guestList)
+                                  }}
                                   className="mt-2 rounded-lg border border-gray-300 px-3 py-2 text-xs font-bold text-gray-800 hover:bg-gray-100"
                                 >
                                   ↓ Descargar
@@ -1702,6 +1873,232 @@ export default function ReservationsPage() {
         </div>
 
       </div>
+
+      {selectedReservation && (() => {
+        const total = Number(selectedReservation.total_price || 0)
+        const paid = Number(selectedReservation.amount_paid || 0)
+        const remaining = Math.max(0, total - paid)
+        const guestList = guestLists.find(
+          (list) => list.reservation_id === selectedReservation.id
+        )
+        const schedule = Array.isArray(selectedReservation.payment_schedule)
+          ? selectedReservation.payment_schedule
+          : []
+
+        return (
+          <AdminDialog
+            label="Detalle de reserva"
+            onClose={closeReservation}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-600">Detalle de reserva</p>
+                <h2 className="mt-1 break-words text-2xl font-bold text-gray-950">
+                  {selectedReservation.tenant_full_name ?? 'Reserva pendiente'}
+                </h2>
+                <p className="mt-1 font-semibold text-gray-700">
+                  {getPropertyName(selectedReservation.property_id)}
+                </p>
+                <p className="mt-1 text-sm text-gray-500">
+                  {selectedReservation.reservation_number}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeReservation}
+                aria-label="Cerrar detalle"
+                className="min-h-11 min-w-11 shrink-0 text-2xl text-gray-500 hover:text-gray-950"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-6 rounded-xl bg-gray-100 p-4">
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-700">Check-in</span>
+                <strong className="text-right text-gray-950">{formatDate(selectedReservation.check_in)}</strong>
+              </div>
+              <div className="mt-2 flex justify-between gap-4">
+                <span className="text-gray-700">Check-out</span>
+                <strong className="text-right text-gray-950">{formatDate(selectedReservation.check_out)}</strong>
+              </div>
+            </div>
+
+            <dl className="mt-6 grid grid-cols-2 gap-4">
+              <div>
+                <dt className="text-xs font-bold uppercase text-gray-500">DNI</dt>
+                <dd className="mt-1 break-words font-semibold text-gray-950">{selectedReservation.tenant_dni || '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-bold uppercase text-gray-500">Celular</dt>
+                <dd className="mt-1 break-words font-semibold text-gray-950">{selectedReservation.tenant_phone || '—'}</dd>
+              </div>
+              <div className="col-span-2">
+                <dt className="text-xs font-bold uppercase text-gray-500">Correo</dt>
+                <dd className="mt-1 break-all font-semibold text-gray-950">{selectedReservation.tenant_email || '—'}</dd>
+              </div>
+              <div className="col-span-2">
+                <dt className="text-xs font-bold uppercase text-gray-500">Dirección</dt>
+                <dd className="mt-1 break-words font-semibold text-gray-950">{selectedReservation.tenant_address || '—'}</dd>
+              </div>
+            </dl>
+
+            <section className="mt-7 border-t border-gray-200 pt-6">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-lg font-bold text-gray-950">Estado y pagos</h3>
+                <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-bold text-gray-800">
+                  {reservationStatusText(selectedReservation.reservation_status)}
+                </span>
+              </div>
+              <div className="mt-3 rounded-xl bg-gray-100 p-4">
+                <div className="flex justify-between"><span>Total</span><strong>{currencyLabel(selectedReservation.currency)} {formatMoney(total)}</strong></div>
+                <div className="mt-2 flex justify-between"><span>Pagado</span><strong className="text-green-700">{currencyLabel(selectedReservation.currency)} {formatMoney(paid)}</strong></div>
+                <div className="mt-2 flex justify-between border-t border-gray-300 pt-2"><span>Pendiente</span><strong>{currencyLabel(selectedReservation.currency)} {formatMoney(remaining)}</strong></div>
+              </div>
+            </section>
+
+            <section className="mt-7 border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-bold text-gray-950">Cronograma acordado</h3>
+              {schedule.length > 0 ? (
+                <div className="mt-3 overflow-hidden rounded-xl border border-gray-200">
+                  {schedule.map((installment, index) => (
+                    <div key={`${installment.due_date}-${index}`} className="flex items-center justify-between gap-4 border-b border-gray-200 p-3 last:border-b-0">
+                      <span className="text-sm font-medium text-gray-700">Cuota {index + 1} · {formatDate(installment.due_date)}</span>
+                      <strong className="shrink-0 text-gray-950">{currencyLabel(selectedReservation.currency)} {formatMoney(installment.amount)}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="mt-2 text-sm text-gray-600">No se registró un cronograma de cuotas.</p>}
+            </section>
+
+            <ReservationGuarantee
+              key={selectedReservation.id}
+              reservationId={selectedReservation.id}
+              currency={selectedReservation.currency}
+            />
+
+            <section className="mt-7 border-t border-gray-200 pt-6">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-lg font-bold text-gray-950">Pagos</h3>
+                <span className={`rounded-full px-3 py-1 text-sm font-bold ${
+                  remaining === 0 && total > 0
+                    ? 'bg-green-100 text-green-800'
+                    : paid > 0
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-red-100 text-red-800'
+                }`}>
+                  {paymentStatusText(selectedReservation)}
+                </span>
+              </div>
+
+              {remaining > 0 ? (
+                <div className="mt-5 rounded-xl border border-gray-300 p-4">
+                  <h4 className="font-bold text-gray-950">Registrar nuevo pago</h4>
+                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="reservation-payment-amount" className="text-sm font-semibold text-gray-800">
+                        Monto ({currencyLabel(selectedReservation.currency)})
+                      </label>
+                      <input
+                        id="reservation-payment-amount"
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]+([.][0-9]{1,2})?"
+                        value={paymentAmount}
+                        onChange={(event) => setPaymentAmount(event.target.value)}
+                        placeholder="500.00"
+                        className="mt-2 w-full rounded-lg border border-gray-300 p-3 text-gray-950"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="reservation-payment-date" className="text-sm font-semibold text-gray-800">Fecha</label>
+                      <input
+                        id="reservation-payment-date"
+                        type="date"
+                        value={paymentDate}
+                        onChange={(event) => setPaymentDate(event.target.value)}
+                        className="mt-2 w-full rounded-lg border border-gray-300 p-3 text-gray-950"
+                      />
+                    </div>
+                  </div>
+                  {paymentMessage && (
+                    <p role="status" className={`mt-3 text-sm font-semibold ${paymentMessage.startsWith('✓') ? 'text-green-700' : 'text-red-700'}`}>
+                      {paymentMessage}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={registerPayment}
+                    disabled={registeringPayment}
+                    className="mt-4 w-full rounded-lg bg-gray-950 px-5 py-3 font-bold text-white hover:bg-gray-800 disabled:opacity-50"
+                  >
+                    {registeringPayment ? 'Registrando...' : 'Registrar pago'}
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-5 rounded-xl border border-green-200 bg-green-50 p-4 text-center font-bold text-green-800">
+                  ✓ Reserva pagada en su totalidad
+                </div>
+              )}
+
+              <div className="mt-6">
+                <h4 className="font-bold text-gray-950">Historial de pagos</h4>
+                {payments.length === 0 ? (
+                  <p className="mt-3 text-sm font-medium text-gray-600">Todavía no hay pagos registrados.</p>
+                ) : (
+                  <div className="mt-3 overflow-hidden rounded-xl border border-gray-200">
+                    {payments.map((payment) => (
+                      <div key={payment.id} className="flex items-center justify-between gap-4 border-b border-gray-200 p-3 last:border-b-0">
+                        <span className="text-sm font-medium text-gray-700">{formatDate(payment.payment_date)}</span>
+                        <strong className="text-gray-950">{currencyLabel(payment.currency)} {formatMoney(payment.amount)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="mt-7 border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-bold text-gray-950">Lista de huéspedes</h3>
+              {guestList ? (
+                <div className="mt-3 space-y-4">
+                  <div>
+                    <p className="text-sm font-bold text-green-700">Recibida · {guestList.guests.length} huésped{guestList.guests.length === 1 ? '' : 'es'}</p>
+                    <ul className="mt-2 divide-y divide-gray-200 overflow-hidden rounded-xl border border-gray-200">
+                      {guestList.guests.map((guest, index) => (
+                        <li key={`${guest.dni}-${index}`} className="p-3 text-sm">
+                          <strong className="block text-gray-950">{guest.full_name}</strong>
+                          <span className="text-gray-600">DNI {guest.dni} · {guest.age} años</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <p className="text-sm text-gray-700"><strong>Vehículos:</strong> {guestList.vehicle_plates.length > 0 ? guestList.vehicle_plates.join(', ') : 'Ninguno'}</p>
+                  <p className="text-sm text-gray-700"><strong>Mascotas:</strong> {guestList.pets.length > 0 ? guestList.pets.map((pet) => `${pet.name} (${pet.size})`).join(', ') : 'Ninguna'}</p>
+                </div>
+              ) : (
+                <p className="mt-2 text-sm font-semibold text-amber-700">Pendiente · límite {formatDate(getGuestListDeadline(selectedReservation.check_in))}</p>
+              )}
+            </section>
+
+            <div className="mt-7 border-t border-gray-200 pt-6">
+              {selectedReservation.reservation_status !== 'cancelled' && (
+                <button
+                  type="button"
+                  onClick={cancelReservation}
+                  disabled={cancelling}
+                  className="w-full rounded-lg bg-red-600 px-5 py-3 font-bold text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {cancelling ? 'Cancelando...' : 'Cancelar reserva'}
+                </button>
+              )}
+            <button type="button" onClick={closeReservation} className={`${selectedReservation.reservation_status !== 'cancelled' ? 'mt-3' : ''} w-full rounded-lg border border-gray-300 px-5 py-3 font-semibold text-gray-900 hover:bg-gray-100`}>
+              Cerrar
+            </button>
+            </div>
+          </AdminDialog>
+        )
+      })()}
 
     </main>
   )
