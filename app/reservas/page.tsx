@@ -109,6 +109,7 @@ export default function ReservationsPage() {
   const [errorMessage, setErrorMessage] = useState('')
 
   const [propertyFilter, setPropertyFilter] = useState('all')
+  const [ownerFilter, setOwnerFilter] = useState<OwnerFilter>('all')
   const [reservationStatusFilter, setReservationStatusFilter] =
     useState('all')
   const [paymentStatusFilter, setPaymentStatusFilter] =
@@ -493,6 +494,13 @@ export default function ReservationsPage() {
           return false
         }
 
+        if (
+          ownerFilter !== 'all' &&
+          PROPERTY_OWNERS[getPropertyName(reservation.property_id)] !== ownerFilter
+        ) {
+          return false
+        }
+
         /*
          * ESTADO RESERVA
          */
@@ -588,6 +596,7 @@ export default function ReservationsPage() {
     getPropertyName,
     reservationPeriod,
     propertyFilter,
+    ownerFilter,
     reservationStatusFilter,
     paymentStatusFilter,
     dateFrom,
@@ -713,6 +722,7 @@ export default function ReservationsPage() {
   function clearFilters() {
     setReservationPeriod('upcoming')
     setPropertyFilter('all')
+    setOwnerFilter('all')
     setReservationStatusFilter('all')
     setPaymentStatusFilter('all')
     setDateFrom('')
@@ -1101,6 +1111,7 @@ export default function ReservationsPage() {
               {' · '}
               {[
                 propertyFilter !== 'all',
+                ownerFilter !== 'all',
                 reservationStatusFilter !== 'all',
                 paymentStatusFilter !== 'all',
                 Boolean(dateFrom),
@@ -1213,6 +1224,28 @@ export default function ReservationsPage() {
                   )
                 )}
 
+              </select>
+
+            </div>
+
+            {/* PROPIETARIA */}
+
+            <div>
+
+              <label className="text-sm font-semibold text-gray-800">
+                Propietaria
+              </label>
+
+              <select
+                value={ownerFilter}
+                onChange={(event) =>
+                  setOwnerFilter(event.target.value as OwnerFilter)
+                }
+                className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-950"
+              >
+                <option value="all">Todas las propietarias</option>
+                <option value="Paola">Paola</option>
+                <option value="Victoria">Victoria</option>
               </select>
 
             </div>
