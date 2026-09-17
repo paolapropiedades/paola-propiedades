@@ -8,6 +8,7 @@ import { LogoutButton } from '@/app/components/logout-button'
 import { AdminMobileNav } from '@/app/components/admin-mobile-nav'
 import { AdminDialog } from '@/app/components/admin-dialog'
 import { ReservationGuarantee } from '@/app/components/reservation-guarantee'
+import { PaymentHistory, type PaymentRecord } from '@/app/components/payment-history'
 
 type Property = {
   id: number
@@ -45,15 +46,7 @@ type Reservation = {
   payment_schedule: PaymentInstallment[]
 }
 
-type Payment = {
-  id: number
-  reservation_id: number
-  amount: number
-  payment_date: string
-  created_at: string
-  currency: 'USD' | 'PEN'
-  operation_number: string | null
-}
+type Payment = PaymentRecord
 
 export default function Home() {
   const [properties, setProperties] = useState<Property[]>([])
@@ -619,6 +612,46 @@ export default function Home() {
     await loadData()
 
     setRegisteringPayment(false)
+  }
+
+  function applyPaymentTotal(newPaid: number) {
+    if (!selectedReservation) return
+    const total = Number(selectedReservation.total_price)
+    const updatedReservation: Reservation = {
+      ...selectedReservation,
+      amount_paid: newPaid,
+      payment_status: newPaid <= 0 ? 'unpaid' : newPaid >= total ? 'paid' : 'partial',
+    }
+    setSelectedReservation(updatedReservation)
+    setReservations((current) => current.map((reservation) =>
+      reservation.id === updatedReservation.id ? updatedReservation : reservation
+    ))
+  }
+
+  async function editPayment(
+    payment: PaymentRecord,
+    values: { amount: number; paymentDate: string; operationNumber: string }
+  ) {
+    const { data, error } = await supabase.rpc('update_reservation_payment', {
+      p_payment_id: payment.id,
+      p_amount: values.amount,
+      p_payment_date: values.paymentDate,
+      p_operation_number: values.operationNumber,
+    })
+    if (error) throw new Error(`No se pudo actualizar el pago: ${error.message}`)
+    applyPaymentTotal(Number(data))
+    await loadPayments(payment.reservation_id)
+    await loadData()
+  }
+
+  async function deletePayment(payment: PaymentRecord) {
+    const { data, error } = await supabase.rpc('delete_reservation_payment', {
+      p_payment_id: payment.id,
+    })
+    if (error) throw new Error(`No se pudo eliminar el pago: ${error.message}`)
+    applyPaymentTotal(Number(data))
+    await loadPayments(payment.reservation_id)
+    await loadData()
   }
 
   async function cancelReservation() {
@@ -1660,49 +1693,14 @@ export default function Home() {
               )}
 
 
-              {/* HISTORIAL */}
-
-              <div className="mt-6">
-
-                <h4 className="font-bold text-gray-950">
-                  Historial de pagos
-                </h4>
-
-                {payments.length === 0 ? (
-
-                  <p className="mt-3 text-sm font-medium text-gray-600">
-                    Todavía no hay pagos registrados.
-                  </p>
-
-                ) : (
-
-                  <div className="mt-3 overflow-hidden rounded-xl border border-gray-200">
-
-                    {payments.map((payment) => (
-
-                      <div
-                        key={payment.id}
-                        className="flex items-start justify-between gap-4 border-b border-gray-200 p-3 last:border-b-0"
-                      >
-                        <div className="min-w-0 text-sm font-medium text-gray-700">
-                          <span className="block">{formatDate(payment.payment_date)}</span>
-                          <span className="mt-1 block break-all text-xs text-gray-500">
-                            Operación: {payment.operation_number || 'Sin número registrado'}
-                          </span>
-                        </div>
-
-                        <strong className="text-gray-950">
-                          {currencyLabel(payment.currency)} {formatMoney(payment.amount)}
-                        </strong>
-                      </div>
-
-                    ))}
-
-                  </div>
-
-                )}
-
-              </div>
+              <PaymentHistory
+                payments={payments}
+                formatDate={formatDate}
+                formatMoney={formatMoney}
+                currencyLabel={currencyLabel}
+                onEdit={editPayment}
+                onDelete={deletePayment}
+              />
 
             </div>
 

@@ -9,6 +9,7 @@ import { LogoutButton } from '@/app/components/logout-button'
 import { AdminMobileNav } from '@/app/components/admin-mobile-nav'
 import { AdminDialog } from '@/app/components/admin-dialog'
 import { ReservationGuarantee } from '@/app/components/reservation-guarantee'
+import { PaymentHistory, type PaymentRecord } from '@/app/components/payment-history'
 
 type Property = {
   id: number
@@ -57,15 +58,7 @@ type GuestList = {
   updated_at: string
 }
 
-type Payment = {
-  id: number
-  reservation_id: number
-  amount: number
-  payment_date: string
-  created_at: string
-  currency: 'USD' | 'PEN'
-  operation_number: string | null
-}
+type Payment = PaymentRecord
 
 type ReservationPeriod = 'upcoming' | 'history'
 type OwnerFilter = 'all' | 'Paola' | 'Victoria'
@@ -228,18 +221,11 @@ export default function ReservationsPage() {
     loadData()
   }, [loadData])
 
-  async function openReservation(reservation: Reservation) {
-    setSelectedReservation(reservation)
-    setPayments([])
-    setPaymentAmount('')
-    setPaymentOperationNumber('')
-    setPaymentMessage('')
-    setPaymentDate(new Date().toISOString().split('T')[0])
-
+  async function loadPayments(reservationId: number) {
     const { data, error } = await supabase
       .from('payments')
       .select('*')
-      .eq('reservation_id', reservation.id)
+      .eq('reservation_id', reservationId)
       .order('payment_date', { ascending: false })
       .order('created_at', { ascending: false })
 
@@ -249,6 +235,16 @@ export default function ReservationsPage() {
     }
 
     setPayments((data ?? []) as Payment[])
+  }
+
+  async function openReservation(reservation: Reservation) {
+    setSelectedReservation(reservation)
+    setPayments([])
+    setPaymentAmount('')
+    setPaymentOperationNumber('')
+    setPaymentMessage('')
+    setPaymentDate(new Date().toISOString().split('T')[0])
+    await loadPayments(reservation.id)
   }
 
   function closeReservation() {
@@ -334,6 +330,46 @@ export default function ReservationsPage() {
     await loadData()
     setPaymentMessage('✓ Pago registrado correctamente.')
     setRegisteringPayment(false)
+  }
+
+  function applyPaymentTotal(newPaid: number) {
+    if (!selectedReservation) return
+    const total = Number(selectedReservation.total_price)
+    const updatedReservation = {
+      ...selectedReservation,
+      amount_paid: newPaid,
+      payment_status: newPaid <= 0 ? 'unpaid' : newPaid >= total ? 'paid' : 'partial',
+    }
+    setSelectedReservation(updatedReservation)
+    setReservations((current) => current.map((reservation) =>
+      reservation.id === updatedReservation.id ? updatedReservation : reservation
+    ))
+  }
+
+  async function editPayment(
+    payment: PaymentRecord,
+    values: { amount: number; paymentDate: string; operationNumber: string }
+  ) {
+    const { data, error } = await supabase.rpc('update_reservation_payment', {
+      p_payment_id: payment.id,
+      p_amount: values.amount,
+      p_payment_date: values.paymentDate,
+      p_operation_number: values.operationNumber,
+    })
+    if (error) throw new Error(`No se pudo actualizar el pago: ${error.message}`)
+    applyPaymentTotal(Number(data))
+    await loadPayments(payment.reservation_id)
+    await loadData()
+  }
+
+  async function deletePayment(payment: PaymentRecord) {
+    const { data, error } = await supabase.rpc('delete_reservation_payment', {
+      p_payment_id: payment.id,
+    })
+    if (error) throw new Error(`No se pudo eliminar el pago: ${error.message}`)
+    applyPaymentTotal(Number(data))
+    await loadPayments(payment.reservation_id)
+    await loadData()
   }
 
   async function cancelReservation() {
@@ -2102,24 +2138,14 @@ export default function ReservationsPage() {
                 </div>
               )}
 
-              <div className="mt-6">
-                <h4 className="font-bold text-gray-950">Historial de pagos</h4>
-                {payments.length === 0 ? (
-                  <p className="mt-3 text-sm font-medium text-gray-600">Todavía no hay pagos registrados.</p>
-                ) : (
-                  <div className="mt-3 overflow-hidden rounded-xl border border-gray-200">
-                    {payments.map((payment) => (
-                      <div key={payment.id} className="flex items-start justify-between gap-4 border-b border-gray-200 p-3 last:border-b-0">
-                        <div className="min-w-0 text-sm font-medium text-gray-700">
-                          <span className="block">{formatDate(payment.payment_date)}</span>
-                          <span className="mt-1 block break-all text-xs text-gray-500">Operación: {payment.operation_number || 'Sin número registrado'}</span>
-                        </div>
-                        <strong className="text-gray-950">{currencyLabel(payment.currency)} {formatMoney(payment.amount)}</strong>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <PaymentHistory
+                payments={payments}
+                formatDate={formatDate}
+                formatMoney={formatMoney}
+                currencyLabel={currencyLabel}
+                onEdit={editPayment}
+                onDelete={deletePayment}
+              />
             </section>
 
             <section className="mt-7 border-t border-gray-200 pt-6">
