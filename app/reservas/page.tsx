@@ -64,6 +64,7 @@ type Payment = {
   payment_date: string
   created_at: string
   currency: 'USD' | 'PEN'
+  operation_number: string | null
 }
 
 type ReservationPeriod = 'upcoming' | 'history'
@@ -125,6 +126,7 @@ export default function ReservationsPage() {
     useState<Reservation | null>(null)
   const [payments, setPayments] = useState<Payment[]>([])
   const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentOperationNumber, setPaymentOperationNumber] = useState('')
   const [paymentDate, setPaymentDate] = useState(
     new Date().toISOString().split('T')[0]
   )
@@ -229,6 +231,7 @@ export default function ReservationsPage() {
     setSelectedReservation(reservation)
     setPayments([])
     setPaymentAmount('')
+    setPaymentOperationNumber('')
     setPaymentMessage('')
     setPaymentDate(new Date().toISOString().split('T')[0])
 
@@ -270,6 +273,15 @@ export default function ReservationsPage() {
       setPaymentMessage('Selecciona la fecha del pago.')
       return
     }
+    const operationNumber = paymentOperationNumber.trim()
+    if (!operationNumber) {
+      setPaymentMessage('Ingresa el número de operación.')
+      return
+    }
+    if (operationNumber.length > 100) {
+      setPaymentMessage('El número de operación no puede superar los 100 caracteres.')
+      return
+    }
     if (amount > remaining) {
       setPaymentMessage(`El monto supera el saldo pendiente de ${currencyLabel(selectedReservation.currency)} ${formatMoney(remaining)}.`)
       return
@@ -283,6 +295,7 @@ export default function ReservationsPage() {
         p_amount: amount,
         p_payment_date: paymentDate,
         p_currency: selectedReservation.currency,
+        p_operation_number: operationNumber,
       }
     )
 
@@ -303,6 +316,7 @@ export default function ReservationsPage() {
       reservation.id === updatedReservation.id ? updatedReservation : reservation
     ))
     setPaymentAmount('')
+    setPaymentOperationNumber('')
     setPaymentMessage('✓ Pago registrado correctamente.')
 
     try {
@@ -2020,6 +2034,20 @@ export default function ReservationsPage() {
                         className="mt-2 w-full rounded-lg border border-gray-300 p-3 text-gray-950"
                       />
                     </div>
+                    <div className="sm:col-span-2">
+                      <label htmlFor="reservation-payment-operation" className="text-sm font-semibold text-gray-800">Número de operación</label>
+                      <input
+                        id="reservation-payment-operation"
+                        type="text"
+                        required
+                        maxLength={100}
+                        autoComplete="off"
+                        value={paymentOperationNumber}
+                        onChange={(event) => setPaymentOperationNumber(event.target.value)}
+                        placeholder="Ej. 00123456789"
+                        className="mt-2 w-full rounded-lg border border-gray-300 p-3 text-gray-950"
+                      />
+                    </div>
                   </div>
                   {paymentMessage && (
                     <p role="status" className={`mt-3 text-sm font-semibold ${paymentMessage.startsWith('✓') ? 'text-green-700' : 'text-red-700'}`}>
@@ -2048,8 +2076,11 @@ export default function ReservationsPage() {
                 ) : (
                   <div className="mt-3 overflow-hidden rounded-xl border border-gray-200">
                     {payments.map((payment) => (
-                      <div key={payment.id} className="flex items-center justify-between gap-4 border-b border-gray-200 p-3 last:border-b-0">
-                        <span className="text-sm font-medium text-gray-700">{formatDate(payment.payment_date)}</span>
+                      <div key={payment.id} className="flex items-start justify-between gap-4 border-b border-gray-200 p-3 last:border-b-0">
+                        <div className="min-w-0 text-sm font-medium text-gray-700">
+                          <span className="block">{formatDate(payment.payment_date)}</span>
+                          <span className="mt-1 block break-all text-xs text-gray-500">Operación: {payment.operation_number || 'Sin número registrado'}</span>
+                        </div>
                         <strong className="text-gray-950">{currencyLabel(payment.currency)} {formatMoney(payment.amount)}</strong>
                       </div>
                     ))}

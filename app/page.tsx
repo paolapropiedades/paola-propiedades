@@ -52,6 +52,7 @@ type Payment = {
   payment_date: string
   created_at: string
   currency: 'USD' | 'PEN'
+  operation_number: string | null
 }
 
 export default function Home() {
@@ -90,6 +91,7 @@ export default function Home() {
   const [cancelling, setCancelling] = useState(false)
 
   const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentOperationNumber, setPaymentOperationNumber] = useState('')
   const [paymentDate, setPaymentDate] = useState(
     new Date().toISOString().split('T')[0]
   )
@@ -164,6 +166,7 @@ export default function Home() {
   async function openReservation(reservation: Reservation) {
     setSelectedReservation(reservation)
     setPaymentAmount('')
+    setPaymentOperationNumber('')
     setPaymentMessage('')
     setPaymentDate(new Date().toISOString().split('T')[0])
 
@@ -527,6 +530,18 @@ export default function Home() {
       return
     }
 
+    const operationNumber = paymentOperationNumber.trim()
+
+    if (!operationNumber) {
+      setPaymentMessage('Ingresa el número de operación.')
+      return
+    }
+
+    if (operationNumber.length > 100) {
+      setPaymentMessage('El número de operación no puede superar los 100 caracteres.')
+      return
+    }
+
     if (amount > remaining) {
       setPaymentMessage(
         `El monto supera el saldo pendiente de ${currencyLabel(selectedReservation.currency)} ${formatMoney(
@@ -545,6 +560,7 @@ export default function Home() {
         p_amount: amount,
         p_payment_date: paymentDate,
         p_currency: selectedReservation.currency,
+        p_operation_number: operationNumber,
       }
     )
 
@@ -580,6 +596,7 @@ export default function Home() {
     )
 
     setPaymentAmount('')
+    setPaymentOperationNumber('')
 
     setPaymentMessage(
       '✓ Pago registrado correctamente.'
@@ -1117,6 +1134,7 @@ export default function Home() {
                       {fieldErrors.schedule && <p role="alert" className="mt-1 text-sm text-red-700">{fieldErrors.schedule}</p>}
                       <p className="mt-1 text-xs text-gray-600">Opcional. Las cuotas deben sumar el total.</p>
                     </div>
+
                     <button
                       type="button"
                       onClick={() =>
@@ -1582,6 +1600,24 @@ export default function Home() {
 
                     </div>
 
+                    <div className="sm:col-span-2">
+                      <label htmlFor="calendar-payment-operation" className="text-sm font-semibold text-gray-800">
+                        Número de operación
+                      </label>
+
+                      <input
+                        id="calendar-payment-operation"
+                        type="text"
+                        required
+                        maxLength={100}
+                        autoComplete="off"
+                        value={paymentOperationNumber}
+                        onChange={(e) => setPaymentOperationNumber(e.target.value)}
+                        placeholder="Ej. 00123456789"
+                        className="mt-2 w-full rounded-lg border border-gray-300 p-3 text-gray-950"
+                      />
+                    </div>
+
                   </div>
 
 
@@ -1646,11 +1682,14 @@ export default function Home() {
 
                       <div
                         key={payment.id}
-                        className="flex items-center justify-between border-b border-gray-200 p-3 last:border-b-0"
+                        className="flex items-start justify-between gap-4 border-b border-gray-200 p-3 last:border-b-0"
                       >
-                        <span className="text-sm font-medium text-gray-700">
-                          {formatDate(payment.payment_date)}
-                        </span>
+                        <div className="min-w-0 text-sm font-medium text-gray-700">
+                          <span className="block">{formatDate(payment.payment_date)}</span>
+                          <span className="mt-1 block break-all text-xs text-gray-500">
+                            Operación: {payment.operation_number || 'Sin número registrado'}
+                          </span>
+                        </div>
 
                         <strong className="text-gray-950">
                           {currencyLabel(payment.currency)} {formatMoney(payment.amount)}
