@@ -10,6 +10,7 @@ import { AdminMobileNav } from '@/app/components/admin-mobile-nav'
 import { AdminDialog } from '@/app/components/admin-dialog'
 import { ReservationGuarantee } from '@/app/components/reservation-guarantee'
 import { PaymentHistory, type PaymentRecord } from '@/app/components/payment-history'
+import { ReservationEditor } from '@/app/components/reservation-editor'
 
 type Property = {
   id: number
@@ -43,6 +44,7 @@ type Reservation = {
   guarantee_amount: number
   guarantee_received_on: string | null
   guarantee_returned_on: string | null
+  internal_alias: string | null
 }
 
 type GuestList = {
@@ -172,7 +174,8 @@ export default function ReservationsPage() {
         payment_schedule,
         guarantee_amount,
         guarantee_received_on,
-        guarantee_returned_on
+        guarantee_returned_on,
+        internal_alias
       `)
       .order('check_in', {
         ascending: false,
@@ -605,6 +608,7 @@ export default function ReservationsPage() {
 
           const haystack = [
             reservation.reservation_number,
+            reservation.internal_alias,
             reservation.tenant_full_name,
             reservation.tenant_dni,
             reservation.tenant_phone,
@@ -800,6 +804,9 @@ export default function ReservationsPage() {
             'N° Reserva':
               reservation.reservation_number,
 
+            'Alias privado':
+              reservation.internal_alias ?? '',
+
             Casa:
               getPropertyName(
                 reservation.property_id
@@ -882,6 +889,7 @@ export default function ReservationsPage() {
 
     worksheet['!cols'] = [
       { wch: 16 },
+      { wch: 28 },
       { wch: 14 },
       { wch: 14 },
       { wch: 13 },
@@ -1218,7 +1226,7 @@ export default function ReservationsPage() {
                     e.target.value
                   )
                 }
-                placeholder="Nombre, DNI, celular, correo..."
+                placeholder="Alias, nombre, DNI, celular, correo..."
                 className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-950 placeholder:text-gray-500"
               />
 
@@ -1523,6 +1531,9 @@ export default function ReservationsPage() {
                             reservation.property_id
                           )}
                         </p>
+                        {reservation.internal_alias && (
+                          <p className="mt-1 font-bold text-blue-800">{reservation.internal_alias}</p>
+                        )}
                         <p className="mt-1 font-semibold text-gray-900">
                           {reservation.tenant_full_name ??
                             'Pendiente de confirmar'}
@@ -1797,6 +1808,9 @@ export default function ReservationsPage() {
 
                           <td className="min-w-0 break-words p-2">
 
+                            {reservation.internal_alias && (
+                              <p className="mb-1 font-bold text-blue-800">{reservation.internal_alias}</p>
+                            )}
                             <p className="font-semibold text-gray-950">
                               {reservation.tenant_full_name ??
                                 'Pendiente de confirmar'}
@@ -1985,6 +1999,11 @@ export default function ReservationsPage() {
                 <p className="mt-1 text-sm text-gray-500">
                   {selectedReservation.reservation_number}
                 </p>
+                {selectedReservation.internal_alias && (
+                  <p className="mt-2 inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-bold text-blue-900">
+                    {selectedReservation.internal_alias}
+                  </p>
+                )}
               </div>
               <button
                 type="button"
@@ -1995,6 +2014,19 @@ export default function ReservationsPage() {
                 ×
               </button>
             </div>
+
+            <ReservationEditor
+              reservation={selectedReservation}
+              properties={properties}
+              onSaved={async (updated) => {
+                const merged = { ...selectedReservation, ...updated }
+                setSelectedReservation(merged)
+                setReservations((current) => current.map((reservation) =>
+                  reservation.id === merged.id ? merged : reservation
+                ))
+                await loadData()
+              }}
+            />
 
             <div className="mt-6 rounded-xl bg-gray-100 p-4">
               <div className="flex justify-between gap-4">
@@ -2042,6 +2074,9 @@ export default function ReservationsPage() {
 
             <section className="mt-7 border-t border-gray-200 pt-6">
               <h3 className="text-lg font-bold text-gray-950">Cronograma acordado</h3>
+              {selectedReservation.tenant_email && schedule.length > 0 && (
+                <p className="mt-1 text-xs font-semibold text-blue-800">Los recordatorios se envían automáticamente el día anterior a cada cuota pendiente.</p>
+              )}
               {schedule.length > 0 ? (
                 <div className="mt-3 overflow-hidden rounded-xl border border-gray-200">
                   {schedule.map((installment, index) => (

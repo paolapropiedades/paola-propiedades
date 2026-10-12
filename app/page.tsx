@@ -9,6 +9,7 @@ import { AdminMobileNav } from '@/app/components/admin-mobile-nav'
 import { AdminDialog } from '@/app/components/admin-dialog'
 import { ReservationGuarantee } from '@/app/components/reservation-guarantee'
 import { PaymentHistory, type PaymentRecord } from '@/app/components/payment-history'
+import { ReservationEditor } from '@/app/components/reservation-editor'
 
 type Property = {
   id: number
@@ -44,6 +45,8 @@ type Reservation = {
   payment_status: string
   currency: 'USD' | 'PEN'
   payment_schedule: PaymentInstallment[]
+  guarantee_amount: number
+  internal_alias: string | null
 }
 
 type Payment = PaymentRecord
@@ -59,6 +62,7 @@ export default function Home() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const [propertyId, setPropertyId] = useState('')
+  const [reservationAlias, setReservationAlias] = useState('')
   const [checkIn, setCheckIn] = useState('')
   const [checkOut, setCheckOut] = useState('')
   const [totalPriceInput, setTotalPriceInput] = useState('')
@@ -128,7 +132,9 @@ export default function Home() {
           amount_paid,
           payment_status,
           currency,
-          payment_schedule
+          payment_schedule,
+          guarantee_amount,
+          internal_alias
         `)
         .neq('reservation_status', 'cancelled')
 
@@ -281,6 +287,10 @@ export default function Home() {
       return 'Disponible'
     }
 
+    if (reservation.internal_alias) {
+      return `${reservation.internal_alias} | ${reservation.check_in} → ${reservation.check_out}`
+    }
+
     if (reservation.reservation_status === 'confirmed') {
       return `${
         reservation.tenant_full_name ?? 'Reserva confirmada'
@@ -342,6 +352,7 @@ export default function Home() {
     setCreatedReservationLink('')
     const errors: Record<string, string> = {}
     if (!propertyId) errors.propertyId = 'Selecciona una propiedad.'
+    if (reservationAlias.trim().length > 100) errors.reservationAlias = 'El alias puede tener hasta 100 caracteres.'
     if (!checkIn) errors.checkIn = 'Selecciona la fecha de ingreso.'
     if (!checkOut || nights <= 0) errors.checkOut = 'La salida debe ser posterior al ingreso.'
     if (!Number.isFinite(totalPrice) || totalPrice <= 0) errors.totalPriceInput = 'Ingresa un monto mayor a cero.'
@@ -416,6 +427,7 @@ export default function Home() {
       .from('reservations')
       .insert({
         reservation_number: reservationNumber,
+        internal_alias: reservationAlias.trim() || null,
         property_id: Number(propertyId),
         check_in: checkIn,
         check_out: checkOut,
@@ -486,6 +498,7 @@ export default function Home() {
     setFieldErrors({})
     setShowModal(false)
     setPropertyId('')
+    setReservationAlias('')
     setCheckIn('')
     setCheckOut('')
     setTotalPriceInput('')
@@ -797,6 +810,9 @@ export default function Home() {
                 <span className="mt-1 block text-sm font-medium text-gray-700">
                   {formatDate(reservation.check_in)} – {formatDate(reservation.check_out)}
                 </span>
+                {reservation.internal_alias && (
+                  <span className="mt-1 block font-semibold text-blue-800">{reservation.internal_alias}</span>
+                )}
                 <span className="mt-1 block text-sm text-gray-600">
                   {reservation.tenant_full_name ?? 'Pendiente de confirmar'}
                 </span>
@@ -862,7 +878,7 @@ export default function Home() {
             <p className="text-sm text-gray-600">Reservas del mes. Usa la vista Mes para consultar los días libres.</p>
             {monthReservations.length === 0 && <p className="py-4 text-sm font-semibold text-gray-700">No hay reservas para este mes.</p>}
             {monthReservations.map((r) => <button key={r.id} type="button" onClick={() => openReservation(r)} className="w-full rounded-xl border border-gray-200 p-4 text-left">
-              <span className="block font-bold">{getPropertyName(r)}</span><span className="mt-1 block text-sm">{formatDate(r.check_in)} – {formatDate(r.check_out)}</span><span className="mt-1 block break-words text-sm text-gray-600">{r.tenant_full_name || 'Pendiente de confirmar'} · {getPaymentStatus(r)}</span>
+              <span className="block font-bold">{getPropertyName(r)}</span><span className="mt-1 block text-sm">{formatDate(r.check_in)} – {formatDate(r.check_out)}</span>{r.internal_alias && <span className="mt-1 block break-words font-semibold text-blue-800">{r.internal_alias}</span>}<span className="mt-1 block break-words text-sm text-gray-600">{r.tenant_full_name || 'Pendiente de confirmar'} · {getPaymentStatus(r)}</span>
             </button>)}
           </div>}
           <div className={`${calendarView === 'agenda' ? 'hidden lg:block' : ''} overflow-x-auto`}>
@@ -922,13 +938,11 @@ export default function Home() {
 
                     const showName =
                       reservation &&
-                      reservation.reservation_status ===
-                        'confirmed' &&
-                      reservation.tenant_full_name &&
-                      isReservationStart(
-                        reservation,
-                        day
-                      )
+                      isReservationStart(reservation, day) &&
+                      (reservation.internal_alias ||
+                        (reservation.reservation_status === 'confirmed'
+                          ? reservation.tenant_full_name
+                          : null))
 
                     return (
                       <div
@@ -952,7 +966,7 @@ export default function Home() {
 
                         {showName && (
                           <span className="absolute left-1 z-20 max-w-[100px] truncate rounded bg-gray-950 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">
-                            {reservation.tenant_full_name}
+                            {showName}
                           </span>
                         )}
 
@@ -1063,6 +1077,24 @@ export default function Home() {
                 </select>
                 {fieldErrors.propertyId && <p role="alert" className="mt-1 text-sm text-red-700">{fieldErrors.propertyId}</p>}
 
+                <div className="mt-5">
+                  <label htmlFor="new-reservationAlias" className="text-sm font-semibold text-gray-900">
+                    Alias privado
+                  </label>
+                  <input
+                    id="new-reservationAlias"
+                    value={reservationAlias}
+                    maxLength={100}
+                    onChange={(event) => {
+                      setReservationAlias(event.target.value)
+                      setFieldErrors((current) => ({ ...current, reservationAlias: '' }))
+                    }}
+                    placeholder="Ej. Familia López - Año Nuevo"
+                    className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-950 placeholder:text-gray-500"
+                  />
+                  {fieldErrors.reservationAlias && <p role="alert" className="mt-1 text-sm text-red-700">{fieldErrors.reservationAlias}</p>}
+                  <p className="mt-2 text-xs font-medium text-gray-500">Solo será visible en el área administrativa.</p>
+                </div>
 
                 <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
 
@@ -1395,6 +1427,11 @@ export default function Home() {
                 <p className="mt-1 font-semibold text-gray-700">
                   {getPropertyName(selectedReservation)}
                 </p>
+                {selectedReservation.internal_alias && (
+                  <p className="mt-2 inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-bold text-blue-900">
+                    {selectedReservation.internal_alias}
+                  </p>
+                )}
 
               </div>
 
@@ -1410,6 +1447,18 @@ export default function Home() {
 
             </div>
 
+            <ReservationEditor
+              reservation={selectedReservation}
+              properties={properties}
+              onSaved={async (updated) => {
+                const merged = { ...selectedReservation, ...updated }
+                setSelectedReservation(merged)
+                setReservations((current) => current.map((reservation) =>
+                  reservation.id === merged.id ? merged : reservation
+                ))
+                await loadData()
+              }}
+            />
 
             {/* FECHAS */}
 
