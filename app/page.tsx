@@ -871,14 +871,14 @@ export default function Home() {
 
 
           <div className="flex gap-2 border-b border-gray-200 p-3 lg:hidden" aria-label="Vista de disponibilidad">
-            <button type="button" aria-pressed={calendarView === 'agenda'} onClick={() => setCalendarView('agenda')} className="min-h-11 rounded-lg border px-4 py-2 font-semibold aria-pressed:bg-gray-950 aria-pressed:text-white">Agenda</button>
-            <button type="button" aria-pressed={calendarView === 'month'} onClick={() => setCalendarView('month')} className="min-h-11 rounded-lg border px-4 py-2 font-semibold aria-pressed:bg-gray-950 aria-pressed:text-white">Mes</button>
+            <button type="button" aria-pressed={calendarView === 'agenda'} onClick={() => setCalendarView('agenda')} className="min-h-11 rounded-lg border px-4 py-2 font-semibold text-gray-900 aria-pressed:bg-gray-950 aria-pressed:text-white">Agenda</button>
+            <button type="button" aria-pressed={calendarView === 'month'} onClick={() => setCalendarView('month')} className="min-h-11 rounded-lg border px-4 py-2 font-semibold text-gray-900 aria-pressed:bg-gray-950 aria-pressed:text-white">Mes</button>
           </div>
           {calendarView === 'agenda' && <div className="space-y-3 p-4 lg:hidden">
             <p className="text-sm text-gray-600">Reservas del mes. Usa la vista Mes para consultar los días libres.</p>
             {monthReservations.length === 0 && <p className="py-4 text-sm font-semibold text-gray-700">No hay reservas para este mes.</p>}
-            {monthReservations.map((r) => <button key={r.id} type="button" onClick={() => openReservation(r)} className="w-full rounded-xl border border-gray-200 p-4 text-left">
-              <span className="block font-bold">{getPropertyName(r)}</span><span className="mt-1 block text-sm">{formatDate(r.check_in)} – {formatDate(r.check_out)}</span>{r.internal_alias && <span className="mt-1 block break-words font-semibold text-blue-800">{r.internal_alias}</span>}<span className="mt-1 block break-words text-sm text-gray-600">{r.tenant_full_name || 'Pendiente de confirmar'} · {getPaymentStatus(r)}</span>
+            {monthReservations.map((r) => <button key={r.id} type="button" onClick={() => openReservation(r)} className="w-full rounded-xl border border-gray-200 bg-white p-4 text-left text-gray-950">
+              <span className="block font-bold text-gray-950">{getPropertyName(r)}</span><span className="mt-1 block text-sm font-medium text-gray-700">{formatDate(r.check_in)} – {formatDate(r.check_out)}</span>{r.internal_alias && <span className="mt-1 block break-words font-semibold text-blue-800">{r.internal_alias}</span>}<span className="mt-1 block break-words text-sm text-gray-600">{r.tenant_full_name || 'Pendiente de confirmar'} · {getPaymentStatus(r)}</span>
             </button>)}
           </div>}
           <div className={`${calendarView === 'agenda' ? 'hidden lg:block' : ''} overflow-x-auto`}>
