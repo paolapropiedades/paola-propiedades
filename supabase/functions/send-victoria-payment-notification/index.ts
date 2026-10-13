@@ -20,6 +20,8 @@ type PaymentData = {
     reservation_number: string
     total_price: number
     amount_paid: number
+    check_in: string
+    check_out: string
     tenant_full_name: string | null
     properties: { name: string } | { name: string }[] | null
   } | null
@@ -109,7 +111,7 @@ Deno.serve(async (request) => {
     .select(`
       id, amount, currency, payment_date,
       reservations!inner (
-        reservation_number, total_price, amount_paid, tenant_full_name,
+        reservation_number, total_price, amount_paid, check_in, check_out, tenant_full_name,
         properties!inner (name)
       )
     `)
@@ -132,7 +134,7 @@ Deno.serve(async (request) => {
   const symbol = payment.currency === 'PEN' ? 'S/' : 'US$'
   const remaining = Math.max(Number(reservation.total_price) - Number(reservation.amount_paid), 0)
   const subject = `Pago registrado - ${house} - ${reservation.reservation_number}`
-  const html = `<!doctype html><html lang="es"><body style="margin:0;background:#f3f4f6;font-family:Arial,sans-serif;color:#111827"><div style="padding:32px 16px"><div style="max-width:600px;margin:auto;background:white;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden"><div style="padding:26px 30px;background:#111827;color:white"><strong style="letter-spacing:1.4px">PAOLA PROPIEDADES</strong><h1 style="font-size:24px;margin:10px 0 0">Nuevo pago registrado</h1></div><div style="padding:26px 30px"><h2>${escapeHtml(house)}</h2><p><b>Reserva:</b> ${escapeHtml(reservation.reservation_number)}</p><p><b>Inquilino:</b> ${escapeHtml(reservation.tenant_full_name)}</p><p><b>Fecha del pago:</b> ${escapeHtml(date(payment.payment_date))}</p><p><b>Monto recibido:</b> ${symbol} ${escapeHtml(money(payment.amount))}</p><hr style="border:0;border-top:1px solid #e5e7eb;margin:22px 0"><p><b>Total de la reserva:</b> ${symbol} ${escapeHtml(money(reservation.total_price))}</p><p><b>Total pagado:</b> ${symbol} ${escapeHtml(money(reservation.amount_paid))}</p><p><b>Saldo pendiente:</b> ${symbol} ${escapeHtml(money(remaining))}</p></div></div></div></body></html>`
+  const html = `<!doctype html><html lang="es"><body style="margin:0;background:#f3f4f6;font-family:Arial,sans-serif;color:#111827"><div style="padding:32px 16px"><div style="max-width:600px;margin:auto;background:white;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden"><div style="padding:26px 30px;background:#111827;color:white"><strong style="letter-spacing:1.4px">PAOLA PROPIEDADES</strong><h1 style="font-size:24px;margin:10px 0 0">Nuevo pago registrado</h1></div><div style="padding:26px 30px"><h2>${escapeHtml(house)}</h2><p><b>Reserva:</b> ${escapeHtml(reservation.reservation_number)}</p><p><b>Inquilino:</b> ${escapeHtml(reservation.tenant_full_name)}</p><p><b>Check-in:</b> ${escapeHtml(date(reservation.check_in))}</p><p><b>Check-out:</b> ${escapeHtml(date(reservation.check_out))}</p><p><b>Fecha del pago:</b> ${escapeHtml(date(payment.payment_date))}</p><p><b>Monto recibido:</b> ${symbol} ${escapeHtml(money(payment.amount))}</p><hr style="border:0;border-top:1px solid #e5e7eb;margin:22px 0"><p><b>Total de la reserva:</b> ${symbol} ${escapeHtml(money(reservation.total_price))}</p><p><b>Total pagado:</b> ${symbol} ${escapeHtml(money(reservation.amount_paid))}</p><p><b>Saldo pendiente:</b> ${symbol} ${escapeHtml(money(remaining))}</p></div></div></div></body></html>`
 
   let resend: Response
   try {
