@@ -10,6 +10,7 @@ import { AdminDialog } from '@/app/components/admin-dialog'
 import { ReservationGuarantee } from '@/app/components/reservation-guarantee'
 import { PaymentHistory, type PaymentRecord } from '@/app/components/payment-history'
 import { ReservationEditor } from '@/app/components/reservation-editor'
+import { calculateMaintenance } from '@/lib/maintenance'
 
 type Property = {
   id: number
@@ -41,6 +42,7 @@ type Reservation = {
   tenant_dni: string | null
   tenant_address: string | null
   total_price: number
+  maintenance_fee_pen: number
   amount_paid: number
   payment_status: string
   currency: 'USD' | 'PEN'
@@ -129,6 +131,7 @@ export default function Home() {
           tenant_dni,
           tenant_address,
           total_price,
+          maintenance_fee_pen,
           amount_paid,
           payment_status,
           currency,
@@ -200,6 +203,13 @@ export default function Home() {
       : 0
 
   const totalPrice = Number(totalPriceInput) || 0
+  const selectedPropertyName =
+    properties.find((property) => property.id === Number(propertyId))?.name ?? ''
+  const maintenance = calculateMaintenance(
+    selectedPropertyName,
+    checkIn,
+    checkOut
+  )
   const scheduledTotal = paymentSchedule.reduce(
     (sum, installment) => sum + (Number(installment.amount) || 0),
     0
@@ -438,6 +448,7 @@ export default function Home() {
 
         // Este es el monto final ingresado por el admin.
         total_price: totalPrice,
+        maintenance_fee_pen: maintenance.amount,
         guarantee_amount: guaranteeAmount,
         currency: reservationCurrency,
         payment_schedule: paymentSchedule.map((installment) => ({
@@ -1143,7 +1154,7 @@ export default function Home() {
                 <div className="mt-5">
 
                   <label htmlFor="new-totalPriceInput" className="text-sm font-semibold text-gray-900">
-                    Monto total de la reserva
+                    Monto del alquiler
                   </label>
 
                   <input
@@ -1162,7 +1173,7 @@ export default function Home() {
                 {fieldErrors.totalPriceInput && <p role="alert" className="mt-1 text-sm text-red-700">{fieldErrors.totalPriceInput}</p>}
 
                   <p className="mt-2 text-xs font-medium text-gray-500">
-                    Ingresa directamente el precio final acordado.
+                    Ingresa el precio acordado del alquiler. El mantenimiento se calcula por separado.
                   </p>
 
                 </div>
@@ -1307,11 +1318,23 @@ export default function Home() {
                   </div>
 
                   <div className="mt-3 flex justify-between">
-                    <span className="font-medium text-gray-700">Monto total</span>
+                    <span className="font-medium text-gray-700">Alquiler</span>
                     <strong className="text-gray-950">
                       {currencyLabel(reservationCurrency)} {formatMoney(totalPrice)}
                     </strong>
                   </div>
+
+                  <div className="mt-3 flex justify-between gap-4 border-t border-gray-300 pt-3">
+                    <span className="font-medium text-gray-700">Mantenimiento</span>
+                    <strong className="text-right text-gray-950">
+                      S/ {formatMoney(maintenance.amount)}
+                    </strong>
+                  </div>
+                  {maintenance.newYearExempt && (
+                    <p className="mt-2 text-right text-xs font-bold text-green-700">
+                      Exonerado por estadía de Año Nuevo
+                    </p>
+                  )}
 
                   {Number(guaranteeAmountInput) > 0 && (
                     <div className="mt-3 flex justify-between">
@@ -1488,6 +1511,30 @@ export default function Home() {
                 </strong>
               </div>
 
+            </div>
+
+            <div className="mt-4 rounded-xl border border-gray-200 p-4">
+              <div className="flex justify-between gap-4">
+                <span className="font-medium text-gray-700">Alquiler</span>
+                <strong className="text-right text-gray-950">
+                  {currencyLabel(selectedReservation.currency)} {formatMoney(selectedReservation.total_price)}
+                </strong>
+              </div>
+              <div className="mt-2 flex justify-between gap-4">
+                <span className="font-medium text-gray-700">Mantenimiento</span>
+                <strong className="text-right text-gray-950">
+                  S/ {formatMoney(selectedReservation.maintenance_fee_pen)}
+                </strong>
+              </div>
+              {calculateMaintenance(
+                getPropertyName(selectedReservation),
+                selectedReservation.check_in,
+                selectedReservation.check_out
+              ).newYearExempt && (
+                <p className="mt-2 text-right text-xs font-bold text-green-700">
+                  Exonerado por estadía de Año Nuevo
+                </p>
+              )}
             </div>
 
 

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { BrandLogo } from '@/app/components/brand-logo'
 import { GuestListForm } from './guest-list-form'
+import { calculateMaintenance } from '@/lib/maintenance'
 
 type Reservation = {
   reservation_number: string
@@ -12,6 +13,7 @@ type Reservation = {
   check_out: string
   nights: number
   total_price: number
+  maintenance_fee_pen: number
   reservation_status: string
   property_name: string
   max_guests?: number
@@ -373,6 +375,12 @@ export default function ReservationPage({
 
 
   const money = (amount: number) => `${reservation.currency === 'PEN' ? 'S/' : 'US$'} ${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const soles = (amount: number) => `S/ ${Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const maintenance = calculateMaintenance(
+    reservation.property_name,
+    reservation.check_in,
+    reservation.check_out
+  )
 
   return (
     <main className="min-h-screen bg-[#f3f8fa] px-3 py-5 text-slate-900 sm:px-6 sm:py-6 lg:py-8">
@@ -410,8 +418,10 @@ export default function ReservationPage({
                 <h2 id="summary-title" className="text-lg font-bold text-[#16364b]">Resumen de tu reserva</h2>
                 <dl className="mt-3 divide-y divide-slate-100">
                   <div className="flex flex-wrap justify-between gap-2 py-3"><dt>Alquiler</dt><dd className="font-bold tabular-nums">{money(reservation.total_price)}</dd></div>
+                  <div className="flex flex-wrap justify-between gap-2 py-3"><dt>Mantenimiento</dt><dd className="font-bold tabular-nums">{soles(reservation.maintenance_fee_pen)}</dd></div>
                   {Number(reservation.guarantee_amount) > 0 && <div className="flex flex-wrap justify-between gap-2 py-3"><dt>Depósito de garantía</dt><dd className="font-bold tabular-nums">{money(Number(reservation.guarantee_amount))}</dd></div>}
                 </dl>
+                {maintenance.newYearExempt && <p className="mt-2 text-sm font-bold text-emerald-700">Mantenimiento exonerado por estadía de Año Nuevo.</p>}
                 {Number(reservation.guarantee_amount) > 0 && <div className="mt-2 text-sm leading-6 text-slate-600"><p>La garantía se entrega por separado del alquiler.</p><p>{reservation.guarantee_returned_on ? `Devuelta el ${formatDate(reservation.guarantee_returned_on)}` : reservation.guarantee_received_on ? `Recibida el ${formatDate(reservation.guarantee_received_on)}` : 'Garantía pendiente de entrega'}</p></div>}
               </section>
               {reservation.payment_schedule.length > 0 && <section>

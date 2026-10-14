@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { calculateMaintenance } from "@/lib/maintenance";
 
 export type EditableReservation = {
   id: number;
@@ -9,6 +10,7 @@ export type EditableReservation = {
   check_in: string;
   check_out: string;
   total_price: number;
+  maintenance_fee_pen: number;
   amount_paid: number;
   currency: "USD" | "PEN";
   payment_schedule: Array<{ due_date: string; amount: number }>;
@@ -70,6 +72,20 @@ function ReservationEditorForm({
       ),
     [schedule],
   );
+  const selectedPropertyName =
+    properties.find((property) => property.id === Number(propertyId))?.name ?? "";
+  const maintenanceChanged =
+    Number(propertyId) !== reservation.property_id ||
+    checkIn !== reservation.check_in ||
+    checkOut !== reservation.check_out;
+  const maintenancePreview = calculateMaintenance(
+    selectedPropertyName,
+    checkIn,
+    checkOut,
+  );
+  const displayedMaintenance = maintenanceChanged
+    ? maintenancePreview.amount
+    : Number(reservation.maintenance_fee_pen || 0);
 
   async function save() {
     setMessage("");
@@ -150,7 +166,7 @@ function ReservationEditorForm({
       .eq("id", reservation.id)
       .select(
         `
-        property_id, check_in, check_out, nights, total_price, amount_paid,
+        property_id, check_in, check_out, nights, total_price, maintenance_fee_pen, amount_paid,
         currency, payment_schedule, guarantee_amount, internal_alias,
         tenant_full_name, tenant_dni, tenant_address, tenant_phone, tenant_email
       `,
@@ -268,7 +284,7 @@ function ReservationEditorForm({
             </select>
           </label>
           <label className="text-sm font-semibold text-gray-900">
-            Total
+            Alquiler
             <input
               type="text"
               inputMode="decimal"
@@ -287,6 +303,25 @@ function ReservationEditorForm({
               className="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3"
             />
           </label>
+        </div>
+
+        <div className="rounded-xl border border-gray-300 bg-white p-3">
+          <div className="flex justify-between gap-4">
+            <span className="font-semibold text-gray-700">Mantenimiento</span>
+            <strong className="text-gray-950">
+              S/ {displayedMaintenance.toFixed(2)}
+            </strong>
+          </div>
+          {maintenanceChanged && (
+            <p className="mt-2 text-xs text-gray-600">
+              Se actualizará al guardar porque cambió la propiedad o la estadía.
+            </p>
+          )}
+          {maintenancePreview.newYearExempt && (
+            <p className="mt-2 text-xs font-bold text-green-700">
+              Exonerado por estadía de Año Nuevo.
+            </p>
+          )}
         </div>
 
         <div className="rounded-xl border border-gray-300 bg-white p-3">

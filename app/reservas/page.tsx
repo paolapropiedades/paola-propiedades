@@ -27,6 +27,7 @@ type Reservation = {
   nights: number
   price_per_night: number
   total_price: number
+  maintenance_fee_pen: number
   amount_paid: number
   reservation_status: string
   payment_status: string
@@ -161,6 +162,7 @@ export default function ReservationsPage() {
         nights,
         price_per_night,
         total_price,
+        maintenance_fee_pen,
         amount_paid,
         reservation_status,
         payment_status,
@@ -858,6 +860,9 @@ export default function ReservationsPage() {
 
             'Total reserva':
               total,
+
+            'Mantenimiento (S/)':
+              Number(reservation.maintenance_fee_pen || 0),
 
             Moneda: reservation.currency,
 
@@ -1568,10 +1573,18 @@ export default function ReservationsPage() {
                         </div>
                         <div>
                           <dt className="font-medium text-gray-500">
-                            Total
+                            Alquiler
                           </dt>
                           <dd className="mt-1 font-bold text-gray-950">
                             {currencyLabel(reservation.currency)} {formatMoney(total)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="font-medium text-gray-500">
+                            Mantenimiento
+                          </dt>
+                          <dd className="mt-1 font-bold text-gray-950">
+                            S/ {formatMoney(Number(reservation.maintenance_fee_pen || 0))}
                           </dd>
                         </div>
                         <div>
@@ -1680,16 +1693,17 @@ export default function ReservationsPage() {
               <table className="w-full table-fixed border-collapse text-xs xl:text-sm">
 
                 <colgroup>
-                  <col className="w-[9%]" />
-                  <col className="w-[16%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[7%]" />
+                  <col className="w-[7%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[8%]" />
                   <col className="w-[8%]" />
                   <col className="w-[8%]" />
                   <col className="w-[9%]" />
-                  <col className="w-[9%]" />
-                  <col className="w-[9%]" />
                   <col className="w-[10%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[12%]" />
+                  <col className="w-[13%]" />
                 </colgroup>
 
                 <thead className="bg-gray-100">
@@ -1713,7 +1727,11 @@ export default function ReservationsPage() {
                     </th>
 
                     <th className="p-2 text-right">
-                      Total
+                      Alquiler
+                    </th>
+
+                    <th className="p-2 text-right">
+                      Mant.
                     </th>
 
                     <th className="p-2 text-right">
@@ -1848,6 +1866,10 @@ export default function ReservationsPage() {
                             {formatMoney(
                               total
                             )}
+                          </td>
+
+                          <td className="p-2 text-right font-bold text-gray-950">
+                            S/ {formatMoney(Number(reservation.maintenance_fee_pen || 0))}
                           </td>
 
 
@@ -2066,7 +2088,8 @@ export default function ReservationsPage() {
                 </span>
               </div>
               <div className="mt-3 rounded-xl bg-gray-100 p-4">
-                <div className="flex justify-between"><span>Total</span><strong>{currencyLabel(selectedReservation.currency)} {formatMoney(total)}</strong></div>
+                <div className="flex justify-between"><span>Alquiler</span><strong>{currencyLabel(selectedReservation.currency)} {formatMoney(total)}</strong></div>
+                <div className="mt-2 flex justify-between"><span>Mantenimiento</span><strong>S/ {formatMoney(Number(selectedReservation.maintenance_fee_pen || 0))}</strong></div>
                 <div className="mt-2 flex justify-between"><span>Pagado</span><strong className="text-green-700">{currencyLabel(selectedReservation.currency)} {formatMoney(paid)}</strong></div>
                 <div className="mt-2 flex justify-between border-t border-gray-300 pt-2"><span>Pendiente</span><strong>{currencyLabel(selectedReservation.currency)} {formatMoney(remaining)}</strong></div>
               </div>
