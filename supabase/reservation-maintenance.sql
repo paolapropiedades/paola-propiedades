@@ -95,6 +95,8 @@ $$;
 revoke all privileges
   on function public.calculate_reservation_maintenance_pen(bigint, date, date)
   from public, anon, authenticated;
+grant execute on function public.calculate_reservation_maintenance_pen(bigint, date, date)
+  to authenticated;
 
 create or replace function public.set_reservation_maintenance_pen()
 returns trigger
