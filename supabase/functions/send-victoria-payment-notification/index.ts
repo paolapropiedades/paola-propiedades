@@ -16,6 +16,7 @@ type PaymentData = {
   amount: number
   currency: 'USD' | 'PEN'
   payment_date: string
+  voucher_path: string | null
   reservations: {
     reservation_number: string
     total_price: number
@@ -109,7 +110,7 @@ Deno.serve(async (request) => {
     .is('victoria_email_sent_at', null)
     .or(`victoria_email_claimed_at.is.null,victoria_email_claimed_at.lt.${staleBefore}`)
     .select(`
-      id, amount, currency, payment_date,
+      id, amount, currency, payment_date, voucher_path,
       reservations!inner (
         reservation_number, total_price, amount_paid, check_in, check_out, tenant_full_name,
         properties!inner (name)
@@ -130,6 +131,31 @@ Deno.serve(async (request) => {
     return response({ ok: true, not_victoria: true })
   }
 
+  const attachments: { filename: string; content: string }[] = []
+  if (payment.voucher_path) {
+    try {
+      const { data: voucher, error: voucherError } = await admin.storage
+        .from('payment-vouchers').download(payment.voucher_path)
+      if (voucherError || !voucher) throw new Error('No se pudo descargar el voucher.')
+      const extension = payment.voucher_path.split('.').pop()?.toLowerCase()
+      if (!extension || !['jpg', 'jpeg', 'png', 'webp'].includes(extension) ||
+          !voucher.size || voucher.size > 5 * 1024 * 1024) {
+        throw new Error('Formato o tamaño de voucher inválido.')
+      }
+      const bytes = new Uint8Array(await voucher.arrayBuffer())
+      let binary = ''
+      for (let offset = 0; offset < bytes.length; offset += 8192) {
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192))
+      }
+      attachments.push({ filename: `voucher-pago-${paymentId}.${extension}`, content: btoa(binary) })
+    } catch {
+      console.error('No se pudo preparar el voucher del pago:', paymentId)
+      await admin.from('payments').update({ victoria_email_claimed_at: null })
+        .eq('id', paymentId).eq('victoria_email_claimed_at', claimedAt)
+      return response({ error: 'El pago está registrado, pero no se pudo adjuntar el voucher al correo.' }, 502)
+    }
+  }
+
   const reservation = payment.reservations!
   const symbol = payment.currency === 'PEN' ? 'S/' : 'US$'
   const remaining = Math.max(Number(reservation.total_price) - Number(reservation.amount_paid), 0)
@@ -148,6 +174,7 @@ Deno.serve(async (request) => {
       body: JSON.stringify({
         from: 'Paola Propiedades <reservas@paolapropiedades.com>',
         to: [recipient], subject, html,
+        ...(attachments.length ? { attachments } : {}),
       }),
     })
   } catch (sendError) {
