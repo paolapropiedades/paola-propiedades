@@ -10,6 +10,8 @@ import { AdminMobileNav } from '@/app/components/admin-mobile-nav'
 import { AdminDialog } from '@/app/components/admin-dialog'
 import { ReservationGuarantee } from '@/app/components/reservation-guarantee'
 import { PaymentHistory, type PaymentRecord } from '@/app/components/payment-history'
+import { VoucherInput } from '@/app/components/payment-voucher'
+import { registerPaymentWithVoucher } from '@/lib/payment-voucher'
 import { ReservationEditor } from '@/app/components/reservation-editor'
 
 type Property = {
@@ -123,6 +125,7 @@ export default function ReservationsPage() {
     useState<Reservation | null>(null)
   const [payments, setPayments] = useState<Payment[]>([])
   const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentVoucher, setPaymentVoucher] = useState<File | null>(null)
   const [paymentOperationNumber, setPaymentOperationNumber] = useState('')
   const [paymentDate, setPaymentDate] = useState(
     new Date().toISOString().split('T')[0]
@@ -247,6 +250,7 @@ export default function ReservationsPage() {
     setPayments([])
     setPaymentAmount('')
     setPaymentOperationNumber('')
+    setPaymentVoucher(null)
     setPaymentMessage('')
     setPaymentDate(new Date().toISOString().split('T')[0])
     await loadPayments(reservation.id)
@@ -290,15 +294,15 @@ export default function ReservationsPage() {
     }
 
     setRegisteringPayment(true)
-    const { data: paymentId, error } = await supabase.rpc(
-      'register_payment_in_currency',
+    const { data: paymentId, error } = await registerPaymentWithVoucher(
       {
         p_reservation_id: selectedReservation.id,
         p_amount: amount,
         p_payment_date: paymentDate,
         p_currency: selectedReservation.currency,
         p_operation_number: operationNumber,
-      }
+      },
+      paymentVoucher
     )
 
     if (error) {
@@ -319,6 +323,7 @@ export default function ReservationsPage() {
     ))
     setPaymentAmount('')
     setPaymentOperationNumber('')
+    setPaymentVoucher(null)
     setPaymentMessage('✓ Pago registrado correctamente.')
 
     try {
@@ -2176,6 +2181,7 @@ export default function ReservationsPage() {
                       />
                     </div>
                   </div>
+                  <VoucherInput file={paymentVoucher} onChange={setPaymentVoucher} disabled={registeringPayment} />
                   {paymentMessage && (
                     <p role="status" className={`mt-3 text-sm font-semibold ${paymentMessage.startsWith('✓') ? 'text-green-700' : 'text-red-700'}`}>
                       {paymentMessage}

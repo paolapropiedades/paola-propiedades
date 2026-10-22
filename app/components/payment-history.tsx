@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { VoucherLink } from './payment-voucher'
 
 export type PaymentRecord = {
   id: number
@@ -10,6 +11,7 @@ export type PaymentRecord = {
   created_at: string
   currency: 'USD' | 'PEN'
   operation_number: string | null
+  voucher_path?: string | null
 }
 
 type EditValues = {
@@ -134,6 +136,7 @@ export function PaymentHistory({
                   <div className="min-w-0 text-sm font-medium text-gray-700">
                     <span className="block">{formatDate(payment.payment_date)}</span>
                     <span className="mt-1 block break-all text-xs text-gray-500">Operación: {payment.operation_number || 'Sin número registrado'}</span>
+                    {payment.voucher_path && <VoucherLink path={payment.voucher_path} />}
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                     <strong className="mr-1 text-gray-950">{currencyLabel(payment.currency)} {formatMoney(payment.amount)}</strong>

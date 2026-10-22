@@ -9,6 +9,8 @@ import { AdminMobileNav } from '@/app/components/admin-mobile-nav'
 import { AdminDialog } from '@/app/components/admin-dialog'
 import { ReservationGuarantee } from '@/app/components/reservation-guarantee'
 import { PaymentHistory, type PaymentRecord } from '@/app/components/payment-history'
+import { VoucherInput } from '@/app/components/payment-voucher'
+import { registerPaymentWithVoucher } from '@/lib/payment-voucher'
 import { ReservationEditor } from '@/app/components/reservation-editor'
 import { calculateMaintenance } from '@/lib/maintenance'
 
@@ -90,6 +92,7 @@ export default function Home() {
   const [cancelling, setCancelling] = useState(false)
 
   const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentVoucher, setPaymentVoucher] = useState<File | null>(null)
   const [paymentOperationNumber, setPaymentOperationNumber] = useState('')
   const [paymentDate, setPaymentDate] = useState(
     new Date().toISOString().split('T')[0]
@@ -169,6 +172,7 @@ export default function Home() {
     setSelectedReservation(reservation)
     setPaymentAmount('')
     setPaymentOperationNumber('')
+    setPaymentVoucher(null)
     setPaymentMessage('')
     setPaymentDate(new Date().toISOString().split('T')[0])
 
@@ -570,15 +574,15 @@ export default function Home() {
 
     setRegisteringPayment(true)
 
-    const { data: paymentId, error } = await supabase.rpc(
-      'register_payment_in_currency',
+    const { data: paymentId, error } = await registerPaymentWithVoucher(
       {
         p_reservation_id: selectedReservation.id,
         p_amount: amount,
         p_payment_date: paymentDate,
         p_currency: selectedReservation.currency,
         p_operation_number: operationNumber,
-      }
+      },
+      paymentVoucher
     )
 
     if (error) {
@@ -614,6 +618,7 @@ export default function Home() {
 
     setPaymentAmount('')
     setPaymentOperationNumber('')
+    setPaymentVoucher(null)
 
     setPaymentMessage(
       '✓ Pago registrado correctamente.'
@@ -1750,6 +1755,7 @@ export default function Home() {
                   </div>
 
 
+                  <VoucherInput file={paymentVoucher} onChange={setPaymentVoucher} disabled={registeringPayment} />
                   {paymentMessage && (
 
                     <p
