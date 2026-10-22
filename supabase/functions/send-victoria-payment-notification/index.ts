@@ -173,7 +173,7 @@ Deno.serve(async (request) => {
       },
       body: JSON.stringify({
         from: 'Paola Propiedades <reservas@paolapropiedades.com>',
-        to: [recipient], subject, html,
+        to: [...new Set([recipient.toLowerCase(), 'corferpa@hotmail.com'])], subject, html,
         ...(attachments.length ? { attachments } : {}),
       }),
     })
