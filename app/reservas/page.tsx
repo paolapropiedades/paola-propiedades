@@ -12,6 +12,7 @@ import { ReservationGuarantee } from '@/app/components/reservation-guarantee'
 import { PaymentHistory, type PaymentRecord } from '@/app/components/payment-history'
 import { VoucherInput } from '@/app/components/payment-voucher'
 import { registerPaymentWithVoucher } from '@/lib/payment-voucher'
+import { PaymentExport } from '@/app/components/payment-export'
 import { ReservationEditor } from '@/app/components/reservation-editor'
 
 type Property = {
@@ -1065,6 +1066,8 @@ export default function ReservationsPage() {
         {/* RESUMEN */}
 
         <AdminMobileNav current="reservations" />
+
+        <PaymentExport owners={PROPERTY_OWNERS} />
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
