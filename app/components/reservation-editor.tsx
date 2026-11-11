@@ -177,7 +177,7 @@ function ReservationEditorForm({
       console.error("Reservation edit error:", error);
       setMessage(
         error.code === "23P01"
-          ? "Las nuevas fechas se cruzan con otra reserva de esta propiedad."
+          ? "Las nuevas fechas coinciden con otra reserva o su día de limpieza. Deja al menos un día entre el check-out y el siguiente check-in."
           : `No se pudo guardar: ${error.message}`,
       );
       setSaving(false);
@@ -268,6 +268,7 @@ function ReservationEditorForm({
           </label>
         </div>
 
+        <p className="text-sm text-sky-900">El día de salida se reserva para limpieza. El siguiente ingreso puede ser al día siguiente.</p>
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="text-sm font-semibold text-gray-900">
             Moneda

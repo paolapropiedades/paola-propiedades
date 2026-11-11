@@ -250,6 +250,15 @@ export default function Home() {
     })
   }
 
+  function getCleaningReservation(selectedPropertyId: number, day: number) {
+    const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    return reservations.find(reservation =>
+      reservation.property_id === selectedPropertyId &&
+      reservation.reservation_status !== 'cancelled' &&
+      reservation.check_out === date
+    )
+  }
+
   function getReservationColor(reservation?: Reservation) {
     if (!reservation) {
       return 'bg-white hover:bg-gray-100'
@@ -471,7 +480,7 @@ export default function Home() {
 
       if (error.code === '23P01') {
         setMessage(
-          'Estas fechas ya están ocupadas para esta casa.'
+          'Estas fechas coinciden con otra reserva o con su día de limpieza. El siguiente ingreso debe ser al menos un día después del check-out.'
         )
       } else {
         setMessage(
@@ -952,6 +961,8 @@ export default function Home() {
                     const reservation =
                       getReservation(property.id, day)
 
+                    const cleaning = !reservation && getCleaningReservation(property.id, day)
+                    const tooltip = cleaning ? 'Limpieza: no disponible para ingreso' : getTooltip(reservation)
                     const showName =
                       reservation &&
                       isReservationStart(reservation, day) &&
@@ -963,10 +974,10 @@ export default function Home() {
                     return (
                       <div
                         key={`${property.id}-${day}`}
-                        title={getTooltip(reservation)}
+                        title={tooltip}
                         role={reservation ? 'button' : undefined}
                         tabIndex={reservation ? 0 : undefined}
-                        aria-label={`${property.name}, día ${day}: ${getTooltip(reservation)}`}
+                        aria-label={`${property.name}, día ${day}: ${tooltip}`}
                         onKeyDown={(event) => { if (reservation && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); openReservation(reservation) } }}
                         onClick={() => {
                           if (reservation) {
@@ -977,9 +988,10 @@ export default function Home() {
                           reservation
                             ? 'cursor-pointer'
                             : ''
-                        } ${getReservationColor(reservation)} ${new Date().getFullYear() === year && new Date().getMonth() === month && new Date().getDate() === day ? 'ring-2 ring-inset ring-blue-600' : ''} ${!reservation && [0, 6].includes(new Date(year, month, day).getDay()) ? 'bg-slate-100' : ''}`}
+                        } ${cleaning ? "bg-sky-200 text-sky-950" : getReservationColor(reservation)} ${new Date().getFullYear() === year && new Date().getMonth() === month && new Date().getDate() === day ? 'ring-2 ring-inset ring-blue-600' : ''} ${!reservation && !cleaning && [0, 6].includes(new Date(year, month, day).getDay()) ? 'bg-slate-100' : ''}`}
                       >
 
+                        {cleaning && <span className="truncate px-1 text-[9px] font-semibold">Limpieza</span>}
                         {showName && (
                           <span className="absolute left-1 z-20 max-w-[100px] truncate rounded bg-gray-950 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">
                             {showName}
@@ -1006,6 +1018,10 @@ export default function Home() {
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-full border border-gray-400 bg-white" />
               Disponible
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-sky-200" />
+              Limpieza (día de salida)
             </div>
 
             <div className="flex items-center gap-2">
@@ -1154,6 +1170,7 @@ export default function Home() {
                 </div>
 
 
+                <p className="mt-2 text-sm text-sky-900">El día de salida se reserva para limpieza. El siguiente huésped puede ingresar al día siguiente.</p>
                 {/* MONTO TOTAL */}
 
                 <div className="mt-5">
