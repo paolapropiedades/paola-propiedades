@@ -374,6 +374,23 @@ export default function ReservationPage({
   }
 
 
+  if (reservation.reservation_status === 'cancelled') {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gray-100 p-6">
+        <section className="w-full max-w-md rounded-2xl border border-gray-300 bg-white p-8 text-center shadow-sm" aria-labelledby="cancelled-title">
+          <BrandLogo className="mx-auto h-auto w-72 max-w-full" />
+          <h1 id="cancelled-title" className="mt-5 text-xl font-semibold text-[#16364b]">
+            Esta reserva fue anulada
+          </h1>
+          <p className="mt-3 text-gray-700">
+            Por favor, no realices ningún abono por esta reserva.
+          </p>
+        </section>
+      </main>
+    )
+  }
+
+
   const money = (amount: number) => `${reservation.currency === 'PEN' ? 'S/' : 'US$'} ${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   const soles = (amount: number) => `S/ ${Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   const maintenance = calculateMaintenance(
