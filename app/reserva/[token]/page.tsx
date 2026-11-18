@@ -671,6 +671,18 @@ export default function ReservationPage({
             <div><h2 className="font-bold text-[#16364b]">Normas de convivencia</h2><p className="mt-1 text-sm leading-6 text-slate-600">Revisa las normas del condominio antes de tu estadía.</p></div>
             <a href="/documentos/normas-de-convivencia.pdf" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 shrink-0 items-center gap-2 font-semibold text-[#19627c] underline underline-offset-4">Ver documento PDF <span aria-hidden="true">↗</span><span className="sr-only"> · Se abre en una nueva pestaña</span></a>
           </section>
+          <div className="mt-3 border-t border-slate-100 pt-3">
+            <Link
+              href={{ pathname: '/terminos-y-condiciones', query: { returnTo: `/reserva/${token}` } }}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center gap-2 font-semibold text-[#19627c] underline underline-offset-4 hover:text-[#16364b]"
+            >
+              Ver Términos y Condiciones de Arrendamiento
+              <span aria-hidden="true">↗</span>
+              <span className="sr-only"> · Se abre en una nueva pestaña</span>
+            </Link>
+          </div>
         </div>
       </article>
     </main>
