@@ -13,6 +13,13 @@ type Row = {
   reservations: {
     reservation_number: string
     tenant_full_name: string | null
+    tenant_dni: string | null
+    tenant_email: string | null
+    tenant_phone: string | null
+    tenant_address: string | null
+    check_in: string
+    check_out: string
+    reservation_status: string
     properties: { name: string } | null
   } | null
 }
@@ -38,7 +45,7 @@ export function PaymentExport({ owners }: { owners: Record<string, string> }) {
       let offset = 0
       while (true) {
         let query = supabase.from('payments')
-          .select('id, payment_date, amount, currency, operation_number, reservations(reservation_number, tenant_full_name, properties(name))')
+          .select('id, payment_date, amount, currency, operation_number, reservations(reservation_number, tenant_full_name, tenant_dni, tenant_email, tenant_phone, tenant_address, check_in, check_out, reservation_status, properties(name))')
           .order('payment_date', { ascending: false }).order('id', { ascending: false })
           .range(offset, offset + 499)
         if (from) query = query.gte('payment_date', from)
@@ -58,7 +65,15 @@ export function PaymentExport({ owners }: { owners: Record<string, string> }) {
         Reserva: payment.reservations?.reservation_number ?? '',
         Propiedad: payment.reservations?.properties?.name ?? '',
         Propietaria: owners[payment.reservations?.properties?.name ?? ''] ?? '',
-        Huésped: payment.reservations?.tenant_full_name ?? '',
+        Cliente: payment.reservations?.tenant_full_name || 'Pendiente de completar',
+        DNI: payment.reservations?.tenant_dni ?? '',
+        Correo: payment.reservations?.tenant_email ?? '',
+        Celular: payment.reservations?.tenant_phone ?? '',
+        Dirección: payment.reservations?.tenant_address ?? '',
+        'Check-in': payment.reservations?.check_in?.split('-').reverse().join('/') ?? '',
+        'Check-out': payment.reservations?.check_out?.split('-').reverse().join('/') ?? '',
+        'Estado de reserva': ({ pending: 'Pendiente', confirmed: 'Confirmada', cancelled: 'Cancelada', blocked: 'Bloqueada' } as Record<string, string>)[payment.reservations?.reservation_status ?? ''] ?? '',
+
         Monto: Number(payment.amount),
         Moneda: payment.currency,
         'Número de operación': payment.operation_number ?? '',
@@ -68,10 +83,13 @@ export function PaymentExport({ owners }: { owners: Record<string, string> }) {
         return
       }
       const sheet = utils.json_to_sheet(rows)
-      sheet['!cols'] = [12, 18, 22, 18, 16, 38, 16, 12, 26].map(wch => ({ wch }))
+      sheet['!cols'] = [12, 18, 22, 18, 16, 38, 16, 32, 18, 45, 16, 16, 20, 16, 12, 26].map(wch => ({ wch }))
+      sheet['!autofilter'] = { ref: sheet['!ref']! }
+      // Keep amounts numeric and identifiers as text (including leading zeros).
+      for (let row = 2; row <= rows.length + 1; row++) sheet[`N${row}`].z = '#,##0.00'
       const book = utils.book_new()
-      utils.book_append_sheet(book, sheet, 'Pagos')
-      writeFileXLSX(book, `Paola_Propiedades_Pagos_${owner}_${from || 'inicio'}_${to || 'hasta_hoy'}.xlsx`, { compression: true })
+      utils.book_append_sheet(book, sheet, 'Pagos y clientes')
+      writeFileXLSX(book, `Paola_Propiedades_Pagos_y_Clientes_${owner}_${from || 'inicio'}_${to || 'hasta_hoy'}.xlsx`, { compression: true })
       setMessage(`Se descargaron ${rows.length} pagos.`)
     } catch {
       setMessage('No se pudieron descargar los pagos. Intenta nuevamente.')
@@ -82,8 +100,8 @@ export function PaymentExport({ owners }: { owners: Record<string, string> }) {
 
   return (
     <section className="mt-6 rounded-xl border border-gray-200 bg-white p-5 text-gray-950">
-      <h2 className="text-lg font-bold">Descargar pagos</h2>
-      <p className="mt-1 text-sm text-gray-600">Filtra por fecha del pago y propietaria. Sin fechas se incluyen todos los pagos, incluso de reservas anteriores.</p>
+      <h2 className="text-lg font-bold">Informe de pagos y clientes</h2>
+      <p className="mt-1 text-sm text-gray-600">Una fila por pago con los datos del cliente y su reserva. Filtra por fecha del pago y propietaria; sin fechas se incluyen todos los pagos. Los datos de clientes sin registro completo aparecerán pendientes.</p>
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <label className="text-sm font-semibold">Desde
           <input type="date" value={from} onChange={e => setFrom(e.target.value)} disabled={busy} className="mt-1 block min-h-11 rounded-lg border border-gray-300 bg-white px-3 text-gray-950" />
@@ -97,7 +115,7 @@ export function PaymentExport({ owners }: { owners: Record<string, string> }) {
           </select>
         </label>
         <button type="button" onClick={download} disabled={busy} className="min-h-11 rounded-lg bg-green-700 px-5 py-3 font-bold text-white hover:bg-green-800 disabled:opacity-50">
-          {busy ? 'Descargando…' : '↓ Descargar pagos en Excel'}
+          {busy ? 'Descargando…' : '↓ Descargar pagos y clientes en Excel'}
         </button>
       </div>
       <p role="status" className="mt-2 text-sm text-gray-700">{message}</p>
